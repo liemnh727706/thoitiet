@@ -1,0 +1,24 @@
+name: vn_weather
+description: App thời tiết Việt Nam - MVP (Open-Meteo). UI lấy cảm hứng breezy-weather.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0          # gọi backend
+  geolocator: ^12.0.0   # lấy GPS người dùng
+  intl: ^0.19.0         # format ngày giờ tiếng Việt
+  provider: ^6.1.2      # quản lý state gọn nhẹ
+  shared_preferences: ^2.2.3  # lưu địa điểm đã chọn
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
