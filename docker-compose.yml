@@ -1,0 +1,19 @@
+# Chạy RIÊNG backend weather, KHÔNG đụng tới app cropguard đang chạy trên VM.
+# Cổng bind vào 127.0.0.1 (chỉ localhost) -> chỉ nginx trên VM proxy vào,
+# không phơi cổng 4000 ra Internet. Muốn truy cập trực tiếp IP:4000 (dev/LAN),
+# đổi thành "4000:4000" và mở cổng 4000 ở Oracle + firewall.
+services:
+  weather-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: weather_server
+    restart: unless-stopped
+    env_file: ./server/.env
+    ports:
+      - "127.0.0.1:4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
