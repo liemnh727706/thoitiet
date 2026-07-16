@@ -1,62 +1,61 @@
-# Kích hoạt Push Notification (FCM) — cảnh báo thời tiết khẩn
+# Bật Push Notification (FCM)
 
-Crawler NCHMF đã chạy và **phát hiện cảnh báo mới** (bão/ATNĐ, nắng nóng, không khí lạnh/rét).
-Khi có tin mới còn hiệu lực, server gọi `onNewWarnings()` để đẩy FCM. Phần này **chưa bật** vì cần
-dự án Firebase của bạn (tôi không tạo tài khoản thay bạn được). Làm theo các bước dưới để bật.
-
-> Trạng thái hiện tại: code server sẵn sàng nhưng **inert** — không cấu hình thì chỉ log, không lỗi.
-> App Flutter **chưa** nhúng Firebase (để giữ build CI xanh khi chưa có `google-services.json`).
+Code đã nối dây sẵn ở **cả app lẫn server** (an toàn: chưa cấu hình thì app vẫn chạy, CI vẫn xanh).
+Chỉ cần cung cấp khóa Firebase là FCM tự bật. Khi NCHMF ra cảnh báo mới còn hiệu lực,
+server tự đẩy tới topic `weather-warnings`; app đã subscribe topic đó.
 
 ---
 
-## Phần A — Server (đẩy tin)
+## A. Tạo trên Firebase Console (bạn làm)
+1. https://console.firebase.google.com → **Add project**.
+2. **Add app → Android**, package name **`com.example.vn_weather`** → tải **`google-services.json`**.
+3. ⚙️ **Project settings → Service accounts → Generate new private key** → tải **service account JSON** (khóa bí mật).
 
-1. Tạo project tại https://console.firebase.google.com → bật **Cloud Messaging**.
-2. Project Settings → Service accounts → **Generate new private key** → tải file JSON.
-3. Đưa file lên VM (KHÔNG commit vào git), ví dụ `/home/ubuntu/thoitiet/secrets/firebase-sa.json`.
-4. Sửa `server/.env`:
-   ```
-   FCM_SERVICE_ACCOUNT=/app/secrets/firebase-sa.json
-   FCM_TOPIC=weather-warnings
-   ```
-5. Cài SDK + mount secret vào container. Thêm vào `docker-compose.yml` service `weather-server`:
-   ```yaml
-       volumes:
-         - ./secrets:/app/secrets:ro
-   ```
-   và cài trong image: thêm `RUN npm install firebase-admin` — hoặc thêm `firebase-admin` vào
-   `server/package.json` rồi `docker compose up -d --build`.
-6. Kiểm tra log: `[FCM] Đã khởi tạo, sẽ đẩy tới topic: weather-warnings`.
+## B. Bật FCM cho APK (build qua CI)
+`google-services.json` KHÔNG commit vào repo. Nạp qua GitHub Secret:
+1. Mã hoá base64:
+   - Linux/macOS: `base64 -w0 google-services.json`
+   - Windows PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("google-services.json"))`
+2. GitHub repo **Settings → Secrets and variables → Actions → New repository secret**:
+   - Name: `GOOGLE_SERVICES_JSON`
+   - Value: chuỗi base64 vừa tạo.
+3. Vào tab **Actions → Build Android APK → Run workflow** (hoặc push commit bất kỳ).
+   Workflow sẽ ghi `google-services.json` và build APK **có FCM**. Log hiện `✅ Đã ghi google-services.json`.
 
-## Phần B — App Flutter (nhận tin)
+> Đã cấu hình sẵn: `minSdk=23`, quyền `POST_NOTIFICATIONS`, plugin Google Services áp **có điều kiện**
+> (chỉ khi có file) nên khi CHƯA thêm secret, CI vẫn build APK bình thường (không FCM).
 
-1. Cài FlutterFire CLI và cấu hình:
-   ```bash
-   dart pub global activate flutterfire_cli
-   cd app && flutterfire configure    # chọn project Firebase, tạo firebase_options.dart + google-services.json
-   ```
-2. Thêm dependency vào `app/pubspec.yaml`:
-   ```yaml
-     firebase_core: ^3.6.0
-     firebase_messaging: ^15.1.3
-   ```
-3. Trong `main.dart`, sau `WidgetsFlutterBinding.ensureInitialized()`:
-   ```dart
-   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-   await FirebaseMessaging.instance.requestPermission();
-   await FirebaseMessaging.instance.subscribeToTopic('weather-warnings');
-   FirebaseMessaging.onMessage.listen((m) {
-     // hiển thị in-app banner khi app đang mở (tùy chọn)
-   });
-   ```
-4. Android: `flutterfire configure` đã thêm `google-services.json` và plugin Gradle.
-   iOS: cần thêm APNs key trong Firebase Console.
-5. Build lại APK — giờ máy nào cài app + subscribe topic sẽ nhận cảnh báo khi NCHMF ra tin mới.
+## C. Bật gửi push phía server (trên VM)
+`firebase-admin` đã có trong `package.json`. Chỉ cần đưa service account lên VM (KHÔNG commit):
+```bash
+mkdir -p ~/thoitiet/secrets
+# dán nội dung service account JSON vào file này:
+nano ~/thoitiet/secrets/firebase-sa.json
+```
+Sửa `~/thoitiet/server/.env`:
+```
+FCM_SERVICE_ACCOUNT=/app/secrets/firebase-sa.json
+FCM_TOPIC=weather-warnings
+```
+Mount secret vào container — thêm vào `docker-compose.yml` service `weather-server`:
+```yaml
+    volumes:
+      - ./secrets:/app/secrets:ro
+```
+Rồi build lại:
+```bash
+cd ~/thoitiet && git pull && docker compose up -d --build
+docker compose logs weather-server | grep FCM   # thấy "[FCM] Đã khởi tạo" là OK
+```
 
-## Kiểm thử nhanh
-- Gửi thử từ Firebase Console → Cloud Messaging → gửi tới topic `weather-warnings`.
-- Hoặc chờ NCHMF ra bản tin mới; server tự đẩy (log `[FCM] Đã đẩy: ...`).
+## D. Kiểm thử
+- **Gửi thử tay:** Firebase Console → **Messaging → New campaign / Send test message** → gửi tới topic `weather-warnings`.
+- **Tự động:** khi NCHMF ra bản tin cảnh báo mới, server log `[FCM] Đã đẩy: ...` và điện thoại nhận thông báo.
 
 ## Bảo mật
-- **KHÔNG** commit `firebase-sa.json` hay `google-services.json` chứa khóa. Đã có `.gitignore`
-  cho `secrets/` và `**/google-services.json` — kiểm tra trước khi push.
+- KHÔNG commit `google-services.json` hay `firebase-sa.json` (đã có trong `.gitignore`).
+- `google-services.json` là cấu hình client (đi kèm trong APK) — dùng GitHub Secret cho gọn.
+- `firebase-sa.json` là **khóa bí mật** — chỉ để trên VM, quyền đọc hạn chế.
+
+## iOS (sau)
+Cần thêm APNs Auth Key trong Firebase + `GoogleService-Info.plist`. Làm sau khi Android chạy ổn.

@@ -4,6 +4,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Áp plugin Google Services CHỈ khi có google-services.json -> CI vẫn build được
+// khi chưa cấu hình FCM; tự bật khi thêm file (qua secret ở CI hoặc thủ công).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.example.vn_weather"
     compileSdk = flutter.compileSdkVersion
@@ -19,7 +25,7 @@ android {
         applicationId = "com.example.vn_weather"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 23  // Firebase (FCM) yêu cầu tối thiểu Android 6.0 (API 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

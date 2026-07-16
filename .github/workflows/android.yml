@@ -29,6 +29,17 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Cấu hình Firebase (google-services.json từ secret nếu có)
+        env:
+          GS: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GS" ]; then
+            echo "$GS" | base64 -d > android/app/google-services.json
+            echo "✅ Đã ghi google-services.json — FCM sẽ được bật trong APK"
+          else
+            echo "ℹ️ Chưa có secret GOOGLE_SERVICES_JSON — build không FCM (bình thường)"
+          fi
+
       - name: Cài dependencies
         run: flutter pub get
 

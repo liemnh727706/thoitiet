@@ -5,10 +5,12 @@ import 'package:provider/provider.dart';
 import 'state/weather_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
+import 'services/push_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('vi_VN', null);
+  await PushService.init(); // bật FCM nếu đã cấu hình Firebase (an toàn nếu chưa)
   runApp(const VnWeatherApp());
 }
 
