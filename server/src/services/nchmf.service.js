@@ -80,8 +80,12 @@ async function parseCategory(category, url) {
   };
 }
 
-// Ngưỡng "còn hiệu lực" (giờ) theo loại tin
-const FRESH_HOURS = { storm: 48, heat: 30, cold: 36 };
+// Ngưỡng "còn hiệu lực" (giờ) theo loại tin. Có thể override tất cả bằng env
+// NCHMF_FRESH_HOURS (hữu ích để tinh chỉnh hoặc demo).
+const OVERRIDE = process.env.NCHMF_FRESH_HOURS ? Number(process.env.NCHMF_FRESH_HOURS) : null;
+const FRESH_HOURS = OVERRIDE
+  ? { storm: OVERRIDE, heat: OVERRIDE, cold: OVERRIDE }
+  : { storm: 48, heat: 30, cold: 36 };
 
 // Lấy toàn bộ cảnh báo NCHMF. Trả { all: [...], active: [...] }
 export async function fetchNchmfWarnings() {
