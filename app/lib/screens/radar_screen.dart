@@ -7,7 +7,7 @@ import '../models/weather.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
 
-// Bản đồ radar mưa (RainViewer) + vị trí/đường đi bão (NCHMF).
+// Bản đồ radar mưa (RainViewer) + đường đi bão dự báo (JMA) & vị trí bão (NCHMF).
 class RadarScreen extends StatefulWidget {
   final double? centerLat;
   final double? centerLon;
@@ -20,7 +20,7 @@ class RadarScreen extends StatefulWidget {
 class _RadarScreenState extends State<RadarScreen> {
   final _api = ApiService();
   RadarData? _radar;
-  StormInfo? _storm;
+  List<Storm> _storms = [];
   String? _error;
   int _index = 0;
   bool _playing = false;
@@ -34,11 +34,11 @@ class _RadarScreenState extends State<RadarScreen> {
 
   Future<void> _load() async {
     try {
-      final results = await Future.wait([_api.getRadar(), _api.getStorm()]);
+      final results = await Future.wait([_api.getRadar(), _api.getStorms()]);
       setState(() {
         _radar = results[0] as RadarData;
-        _storm = results[1] as StormInfo;
-        _index = _radar!.frames.isEmpty ? 0 : _radar!.frames.length - 1; // frame mới nhất
+        _storms = results[1] as List<Storm>;
+        _index = _radar!.frames.isEmpty ? 0 : _radar!.frames.length - 1;
       });
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -104,24 +104,21 @@ class _RadarScreenState extends State<RadarScreen> {
   Widget _buildMap(LatLng center) {
     final frames = _radar!.frames;
     final frame = frames.isNotEmpty ? frames[_index] : null;
-    final storm = _storm;
 
     return Stack(
       children: [
         FlutterMap(
           options: MapOptions(
             initialCenter: center,
-            initialZoom: 5.2,
+            initialZoom: 5.0,
             minZoom: 3,
             maxZoom: 12,
           ),
           children: [
-            // Nền bản đồ OSM
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.example.vn_weather',
             ),
-            // Lớp radar mưa (frame hiện tại)
             if (frame != null)
               Opacity(
                 opacity: 0.7,
@@ -131,87 +128,120 @@ class _RadarScreenState extends State<RadarScreen> {
                   tileDisplay: const TileDisplay.instantaneous(),
                 ),
               ),
-            // Đường đi bão
-            if (storm != null && storm.active && storm.track.length > 1)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: storm.track.map((p) => LatLng(p.lat, p.lon)).toList(),
-                    color: Colors.redAccent,
-                    strokeWidth: 3,
-                  ),
-                ],
-              ),
-            // Marker tâm bão
-            if (storm != null && storm.active && storm.center != null)
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: LatLng(storm.center!.lat, storm.center!.lon),
-                    width: 54,
-                    height: 54,
-                    child: const _StormMarker(),
-                  ),
-                ],
-              ),
+            // Đường đã đi (xám) của từng cơn
+            PolylineLayer(polylines: _pastPolylines()),
+            // Đường đi dự báo (đỏ) của từng cơn
+            PolylineLayer(polylines: _forecastPolylines()),
+            // Marker: tâm hiện tại + các mốc dự báo
+            MarkerLayer(markers: _stormMarkers()),
           ],
         ),
-        // Bảng điều khiển thời gian
         Positioned(left: 0, right: 0, bottom: 0, child: _controlPanel(frame)),
-        // Chú thích nguồn
         Positioned(
           top: 6,
           right: 8,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             color: Colors.white70,
-            child: const Text('Radar: RainViewer · Bão: NCHMF',
+            child: const Text('Radar: RainViewer · Bão: JMA/NCHMF',
                 style: TextStyle(fontSize: 10, color: Colors.black87)),
           ),
         ),
-        if (storm != null && storm.active) _stormBanner(storm),
+        if (_storms.isNotEmpty) _stormBanner(),
       ],
     );
   }
 
-  Widget _stormBanner(StormInfo s) {
+  List<Polyline> _pastPolylines() {
+    final out = <Polyline>[];
+    for (final s in _storms) {
+      if (s.past.length > 1) {
+        out.add(Polyline(
+          points: s.past.map((p) => LatLng(p.lat, p.lon)).toList(),
+          color: Colors.white70,
+          strokeWidth: 2,
+        ));
+      }
+    }
+    return out;
+  }
+
+  List<Polyline> _forecastPolylines() {
+    final out = <Polyline>[];
+    for (final s in _storms) {
+      if (s.track.length > 1) {
+        out.add(Polyline(
+          points: s.track.map((p) => LatLng(p.lat, p.lon)).toList(),
+          color: Colors.redAccent,
+          strokeWidth: 3,
+        ));
+      }
+    }
+    return out;
+  }
+
+  List<Marker> _stormMarkers() {
+    final markers = <Marker>[];
+    for (final s in _storms) {
+      for (final p in s.track) {
+        final isNow = !p.forecast;
+        markers.add(Marker(
+          point: LatLng(p.lat, p.lon),
+          width: isNow ? 50 : 42,
+          height: isNow ? 50 : 42,
+          child: isNow
+              ? const _StormCenter()
+              : _ForecastDot(label: p.advancedHours != null ? '+${p.advancedHours}h' : ''),
+        ));
+      }
+    }
+    return markers;
+  }
+
+  Widget _stormBanner() {
     return Positioned(
       top: 8,
       left: 8,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.red.shade700,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        constraints: const BoxConstraints(maxWidth: 220),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _storms.take(3).map((s) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.red.shade700,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            constraints: const BoxConstraints(maxWidth: 230),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.cyclone_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(s.title ?? 'Bão/ATNĐ',
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    const Icon(Icons.cyclone_rounded, color: Colors.white, size: 17),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(s.label,
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Text(
+                    [
+                      'Nguồn ${s.source}',
+                      if (s.intensity != null) 'gió ${s.intensity}',
+                      if (s.movement != null) 'hướng ${s.movement}',
+                    ].join(' · '),
+                    style: const TextStyle(color: Colors.white, fontSize: 10.5),
+                  ),
                 ),
               ],
             ),
-            if (s.intensity != null || s.movement != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  [
-                    if (s.intensity != null) 'Gió cấp ${s.intensity}',
-                    if (s.movement != null) 'hướng ${s.movement}',
-                  ].join(' · '),
-                  style: const TextStyle(color: Colors.white, fontSize: 11),
-                ),
-              ),
-          ],
-        ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -261,8 +291,9 @@ class _RadarScreenState extends State<RadarScreen> {
   }
 }
 
-class _StormMarker extends StatelessWidget {
-  const _StormMarker();
+// Tâm bão hiện tại
+class _StormCenter extends StatelessWidget {
+  const _StormCenter();
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -271,7 +302,37 @@ class _StormMarker extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: Colors.red, width: 2),
       ),
-      child: const Icon(Icons.cyclone_rounded, color: Colors.red, size: 30),
+      child: const Icon(Icons.cyclone_rounded, color: Colors.red, size: 28),
+    );
+  }
+}
+
+// Điểm dự báo trên đường đi (kèm nhãn giờ)
+class _ForecastDot extends StatelessWidget {
+  final String label;
+  const _ForecastDot({required this.label});
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.redAccent, width: 3),
+          ),
+        ),
+        if (label.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            color: Colors.redAccent,
+            child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 9)),
+          ),
+      ],
     );
   }
 }

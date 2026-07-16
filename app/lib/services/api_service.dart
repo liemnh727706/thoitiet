@@ -35,13 +35,14 @@ class ApiService {
     return RadarData.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
   }
 
-  Future<StormInfo> getStorm() async {
-    final uri = Uri.parse('${AppConfig.apiBase}/api/storm');
+  Future<List<Storm>> getStorms() async {
+    final uri = Uri.parse('${AppConfig.apiBase}/api/storms');
     final res = await _client.get(uri).timeout(const Duration(seconds: 15));
     if (res.statusCode != 200) {
       throw Exception('Không lấy được dữ liệu bão (${res.statusCode})');
     }
-    return StormInfo.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+    final j = jsonDecode(utf8.decode(res.bodyBytes));
+    return (j['storms'] as List? ?? []).map((e) => Storm.fromJson(e)).toList();
   }
 
   Future<List<PlaceResult>> searchPlace(String query) async {

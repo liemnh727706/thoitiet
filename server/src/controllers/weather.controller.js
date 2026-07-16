@@ -2,8 +2,29 @@ import { fetchForecast, geocode } from '../services/openMeteo.service.js';
 import { getCache, setCache } from '../services/cache.service.js';
 import { getCachedWarnings, peekWarnings } from '../services/nchmf.service.js';
 import { getRadar } from '../services/radar.service.js';
+import { getCachedJmaStorms } from '../services/jma.service.js';
 import { resolveRegion, isRelevant } from '../utils/vnRegion.js';
 import { aggregate } from '../utils/aggregate.js';
+
+// Chuẩn hoá bão NCHMF về cùng shape với JMA (cho /api/storms)
+function nchmfToStorm(w) {
+  const s = w.storm;
+  return {
+    source: 'NCHMF',
+    id: null,
+    name: w.title,
+    category: 'Bão/ATNĐ (NCHMF)',
+    intensity: s.intensity ? `cấp ${s.intensity}` : null,
+    movement: s.movement || null,
+    center: s.center,
+    track: (s.track || []).map((p, i) => ({
+      lat: p.lat, lon: p.lon, advancedHours: null, forecast: i > 0,
+    })),
+    past: [],
+    issued: w.issuedAt,
+    sourceUrl: w.sourceUrl,
+  };
+}
 
 // Chuyển cảnh báo NCHMF -> đúng shape alert của app (ưu tiên lên đầu tier 1)
 function toAlert(w) {
@@ -95,6 +116,23 @@ export async function getStorm(req, res) {
     });
   } catch (err) {
     console.error('[getStorm]', err.message);
+    res.status(502).json({ error: 'Không lấy được dữ liệu bão', detail: err.message });
+  }
+}
+
+// GET /api/storms — hợp nhất bão JMA (đường đi dự báo nhiều điểm) + NCHMF (vị trí VN)
+export async function getStorms(req, res) {
+  try {
+    const [jma, warnings] = await Promise.all([
+      getCachedJmaStorms().catch(() => []),
+      getCachedWarnings().catch(() => ({ active: [] })),
+    ]);
+    const nchmf = warnings.active
+      .filter((w) => w.kind === 'storm' && w.storm)
+      .map(nchmfToStorm);
+    res.json({ storms: [...jma, ...nchmf], fetchedAt: new Date().toISOString() });
+  } catch (err) {
+    console.error('[getStorms]', err.message);
     res.status(502).json({ error: 'Không lấy được dữ liệu bão', detail: err.message });
   }
 }

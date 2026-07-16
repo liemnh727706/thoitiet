@@ -245,39 +245,74 @@ class StormPoint {
       StormPoint(lat: (j['lat'] ?? 0).toDouble(), lon: (j['lon'] ?? 0).toDouble());
 }
 
-class StormInfo {
-  final bool active;
-  final String? title;
-  final String? severity;
-  final String? intensity; // cấp gió, vd "6-7"
-  final String? movement;  // hướng, vd "Đông Bắc"
+class TrackPoint {
+  final double lat;
+  final double lon;
+  final int? advancedHours; // null (NCHMF) hoặc 0/24/48/72 (JMA)
+  final bool forecast;      // true = điểm dự báo, false = hiện tại
+  final String? category;
+  final int? windKt;
+
+  TrackPoint({
+    required this.lat,
+    required this.lon,
+    this.advancedHours,
+    this.forecast = false,
+    this.category,
+    this.windKt,
+  });
+
+  factory TrackPoint.fromJson(Map<String, dynamic> j) => TrackPoint(
+        lat: (j['lat'] ?? 0).toDouble(),
+        lon: (j['lon'] ?? 0).toDouble(),
+        advancedHours: j['advancedHours'],
+        forecast: j['forecast'] ?? false,
+        category: j['category'],
+        windKt: j['windKt'],
+      );
+}
+
+class Storm {
+  final String source;     // JMA | NCHMF
+  final String? name;
+  final String? category;  // nhãn tiếng Việt
+  final String? intensity; // "30 kt" hoặc "cấp 6-7"
+  final String? movement;
   final StormPoint? center;
-  final List<StormPoint> track;
+  final List<TrackPoint> track; // hiện tại + các mốc dự báo
+  final List<StormPoint> past;  // đường đã đi
   final String? sourceUrl;
 
-  StormInfo({
-    required this.active,
-    this.title,
-    this.severity,
+  Storm({
+    required this.source,
+    this.name,
+    this.category,
     this.intensity,
     this.movement,
     this.center,
     this.track = const [],
+    this.past = const [],
     this.sourceUrl,
   });
 
-  factory StormInfo.fromJson(Map<String, dynamic> j) => StormInfo(
-        active: j['active'] ?? false,
-        title: j['title'],
-        severity: j['severity'],
+  factory Storm.fromJson(Map<String, dynamic> j) => Storm(
+        source: j['source'] ?? '',
+        name: j['name'],
+        category: j['category'],
         intensity: j['intensity'],
         movement: j['movement'],
         center: j['center'] != null ? StormPoint.fromJson(j['center']) : null,
         track: (j['track'] as List? ?? [])
+            .map((e) => TrackPoint.fromJson(e))
+            .toList(),
+        past: (j['past'] as List? ?? [])
             .map((e) => StormPoint.fromJson(e))
             .toList(),
         sourceUrl: j['sourceUrl'],
       );
+
+  String get label =>
+      (name != null && name!.isNotEmpty) ? '$category $name' : (category ?? 'Bão/ATNĐ');
 }
 
 class PlaceResult {
