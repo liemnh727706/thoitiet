@@ -3,6 +3,7 @@ import { getCache, setCache } from '../services/cache.service.js';
 import { getCachedWarnings, peekWarnings } from '../services/nchmf.service.js';
 import { getRadar } from '../services/radar.service.js';
 import { getCachedJmaStorms } from '../services/jma.service.js';
+import { sendTest } from '../services/push.service.js';
 import { resolveRegion, isRelevant } from '../utils/vnRegion.js';
 import { aggregate } from '../utils/aggregate.js';
 
@@ -134,6 +135,20 @@ export async function getStorms(req, res) {
   } catch (err) {
     console.error('[getStorms]', err.message);
     res.status(502).json({ error: 'Không lấy được dữ liệu bão', detail: err.message });
+  }
+}
+
+// GET /api/push-test?key=... — gửi 1 push thử tới topic (chỉ khi FCM_TEST_TOKEN khớp)
+export async function pushTest(req, res) {
+  const token = process.env.FCM_TEST_TOKEN;
+  if (!token) return res.status(404).json({ error: 'Đã tắt (chưa đặt FCM_TEST_TOKEN)' });
+  if (req.query.key !== token) return res.status(403).json({ error: 'Sai key' });
+  try {
+    const id = await sendTest('🔔 Thử FCM', 'Thông báo thử từ máy chủ Thời tiết VN.');
+    res.json({ ok: true, messageId: id });
+  } catch (err) {
+    console.error('[pushTest]', err.message);
+    res.status(502).json({ error: err.message });
   }
 }
 

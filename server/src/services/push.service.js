@@ -38,6 +38,22 @@ async function ensureInit() {
   return messaging;
 }
 
+// Khởi tạo sớm khi server chạy để xác nhận cấu hình ngay (không đợi cảnh báo).
+export async function initPush() {
+  await ensureInit();
+}
+
+// Gửi 1 push thử tới topic (dùng cho endpoint test). Ném lỗi nếu chưa cấu hình.
+export async function sendTest(title, body) {
+  const m = await ensureInit();
+  if (!m) throw new Error('FCM chưa cấu hình (FCM_SERVICE_ACCOUNT trống hoặc thiếu firebase-admin)');
+  return m.send({
+    topic: TOPIC,
+    notification: { title, body },
+    android: { priority: 'high' },
+  });
+}
+
 // Được poller gọi khi có cảnh báo NCHMF mới còn hiệu lực.
 export async function onNewWarnings(freshWarnings) {
   const m = await ensureInit();
