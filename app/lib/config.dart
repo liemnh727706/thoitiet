@@ -1,13 +1,11 @@
 class AppConfig {
-  // URL backend aggregator.
-  //  - Android Emulator:  http://10.0.2.2:4000
-  //  - iOS Simulator / web / desktop:  http://localhost:4000
-  //  - Máy thật: đổi thành IP LAN của máy chạy backend, vd http://192.168.1.10:4000
-  //
-  // Có thể override khi build:  flutter run --dart-define=API_BASE=http://192.168.1.10:4000
+  // URL backend aggregator. Mặc định trỏ backend production (HTTPS).
+  // Dev local có thể override:
+  //   flutter run --dart-define=API_BASE=http://10.0.2.2:4000   (Android emulator)
+  //   flutter run --dart-define=API_BASE=http://localhost:4000  (web/desktop)
   static const String apiBase = String.fromEnvironment(
     'API_BASE',
-    defaultValue: 'http://10.0.2.2:4000',
+    defaultValue: 'https://cropnlu.duckdns.org/weather',
   );
 
   // Tọa độ mặc định khi chưa có GPS (TP.HCM)
