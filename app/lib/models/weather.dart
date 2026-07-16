@@ -61,6 +61,7 @@ class WeatherAlert {
   final String? sourceUrl;
   final DateTime? issuedAt;
   final bool official;    // true nếu là bản tin chính thức NCHMF
+  final List<String> regions; // mã vùng ảnh hưởng (BAC_BO, ...)
 
   WeatherAlert({
     required this.kind,
@@ -71,6 +72,7 @@ class WeatherAlert {
     this.sourceUrl,
     this.issuedAt,
     this.official = false,
+    this.regions = const [],
   });
 
   factory WeatherAlert.fromJson(Map<String, dynamic> j) => WeatherAlert(
@@ -82,7 +84,20 @@ class WeatherAlert {
         sourceUrl: j['sourceUrl'],
         issuedAt: j['issuedAt'] != null ? DateTime.tryParse(j['issuedAt']) : null,
         official: j['official'] ?? false,
+        regions: (j['regions'] as List? ?? []).map((e) => e.toString()).toList(),
       );
+
+  // Tên vùng tiếng Việt để hiển thị
+  static const _regionNames = {
+    'BAC_BO': 'Bắc Bộ',
+    'BAC_TRUNG_BO': 'Bắc Trung Bộ',
+    'TRUNG_TRUNG_BO': 'Trung Trung Bộ',
+    'NAM_TRUNG_BO': 'Nam Trung Bộ',
+    'TAY_NGUYEN': 'Tây Nguyên',
+    'NAM_BO': 'Nam Bộ',
+  };
+  String get regionsLabel =>
+      regions.map((c) => _regionNames[c] ?? c).join(', ');
 }
 
 class Wind {
@@ -192,6 +207,76 @@ class DailyItem {
         uvIndexMax: j['uvIndexMax'],
         icon: j['icon'] ?? 'cloudy',
         condition: j['condition'] ?? '',
+      );
+}
+
+class RadarFrame {
+  final int time;    // epoch giây
+  final String kind; // past | nowcast
+  final String url;  // tile template .../{z}/{x}/{y}/...png
+  RadarFrame({required this.time, required this.kind, required this.url});
+  factory RadarFrame.fromJson(Map<String, dynamic> j) => RadarFrame(
+        time: j['time'] ?? 0,
+        kind: j['kind'] ?? 'past',
+        url: j['url'] ?? '',
+      );
+  DateTime get dateTime => DateTime.fromMillisecondsSinceEpoch(time * 1000);
+}
+
+class RadarData {
+  final String host;
+  final List<RadarFrame> frames;
+  final String attribution;
+  RadarData({required this.host, required this.frames, required this.attribution});
+  factory RadarData.fromJson(Map<String, dynamic> j) => RadarData(
+        host: j['host'] ?? '',
+        frames: (j['frames'] as List? ?? [])
+            .map((e) => RadarFrame.fromJson(e))
+            .toList(),
+        attribution: j['attribution'] ?? 'RainViewer',
+      );
+}
+
+class StormPoint {
+  final double lat;
+  final double lon;
+  StormPoint({required this.lat, required this.lon});
+  factory StormPoint.fromJson(Map<String, dynamic> j) =>
+      StormPoint(lat: (j['lat'] ?? 0).toDouble(), lon: (j['lon'] ?? 0).toDouble());
+}
+
+class StormInfo {
+  final bool active;
+  final String? title;
+  final String? severity;
+  final String? intensity; // cấp gió, vd "6-7"
+  final String? movement;  // hướng, vd "Đông Bắc"
+  final StormPoint? center;
+  final List<StormPoint> track;
+  final String? sourceUrl;
+
+  StormInfo({
+    required this.active,
+    this.title,
+    this.severity,
+    this.intensity,
+    this.movement,
+    this.center,
+    this.track = const [],
+    this.sourceUrl,
+  });
+
+  factory StormInfo.fromJson(Map<String, dynamic> j) => StormInfo(
+        active: j['active'] ?? false,
+        title: j['title'],
+        severity: j['severity'],
+        intensity: j['intensity'],
+        movement: j['movement'],
+        center: j['center'] != null ? StormPoint.fromJson(j['center']) : null,
+        track: (j['track'] as List? ?? [])
+            .map((e) => StormPoint.fromJson(e))
+            .toList(),
+        sourceUrl: j['sourceUrl'],
       );
 }
 

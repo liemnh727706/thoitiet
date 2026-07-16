@@ -84,6 +84,9 @@ class _AlertTile extends StatelessWidget {
     if (alert.issuedAt != null) {
       parts.add('phát ${DateFormat('HH:mm dd/MM').format(alert.issuedAt!.toLocal())}');
     }
+    if (alert.regions.isNotEmpty) {
+      parts.add('ảnh hưởng: ${alert.regionsLabel}');
+    }
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Row(

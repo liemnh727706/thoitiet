@@ -10,6 +10,7 @@ import '../widgets/detail_grid.dart';
 import '../widgets/hourly_forecast.dart';
 import '../widgets/daily_forecast.dart';
 import 'search_screen.dart';
+import 'radar_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -46,6 +47,19 @@ class HomeScreen extends StatelessWidget {
               onPressed: () => provider.useCurrentLocation(),
             ),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.radar),
+                tooltip: 'Bản đồ mưa & bão',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RadarScreen(
+                      centerLat: data?.latitude,
+                      centerLon: data?.longitude,
+                    ),
+                  ),
+                ),
+              ),
               IconButton(
                 icon: const Icon(Icons.search),
                 tooltip: 'Tìm địa điểm',

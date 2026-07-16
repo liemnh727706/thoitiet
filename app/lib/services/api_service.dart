@@ -26,6 +26,24 @@ class ApiService {
     return WeatherResponse.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
   }
 
+  Future<RadarData> getRadar() async {
+    final uri = Uri.parse('${AppConfig.apiBase}/api/radar');
+    final res = await _client.get(uri).timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) {
+      throw Exception('Không lấy được radar (${res.statusCode})');
+    }
+    return RadarData.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+  }
+
+  Future<StormInfo> getStorm() async {
+    final uri = Uri.parse('${AppConfig.apiBase}/api/storm');
+    final res = await _client.get(uri).timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) {
+      throw Exception('Không lấy được dữ liệu bão (${res.statusCode})');
+    }
+    return StormInfo.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+  }
+
   Future<List<PlaceResult>> searchPlace(String query) async {
     final uri = Uri.parse('${AppConfig.apiBase}/api/geocode')
         .replace(queryParameters: {'q': query});

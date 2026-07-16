@@ -3,6 +3,8 @@
 // dạng: <a href="...detail...">TIÊU ĐỀ <span> ( DD/MM/YYYY HH:MM ) </span></a>
 import * as cheerio from 'cheerio';
 import { classify, parseIssuedAt } from '../utils/nchmfClassify.js';
+import { regionsInText } from '../utils/vnRegion.js';
+import { parseStorm } from '../utils/stormParse.js';
 import { getCache, setCache } from './cache.service.js';
 
 const UA = { 'User-Agent': 'Mozilla/5.0 (compatible; VNWeatherBot/1.0)' };
@@ -19,8 +21,8 @@ async function getHtml(url) {
   return res.text();
 }
 
-// Lấy tóm tắt từ trang chi tiết bản tin (đoạn <p> dài nhất, ghép lại ~300 ký tự)
-async function fetchSummary(detailUrl) {
+// Lấy nội dung trang chi tiết: tóm tắt (~300 ký tự) + toàn văn (để parse bão).
+async function fetchDetail(detailUrl) {
   try {
     const html = await getHtml(detailUrl);
     const $ = cheerio.load(html);
@@ -29,12 +31,12 @@ async function fetchSummary(detailUrl) {
       const t = $(el).text().replace(/\s+/g, ' ').trim();
       if (t.length > 40) paras.push(t);
     });
-    if (!paras.length) return '';
-    // ưu tiên đoạn đầu (thường là mô tả hiện trạng), cắt gọn
+    const fullText = paras.join(' ').normalize('NFC');
     const joined = paras.slice(0, 2).join(' ');
-    return joined.length > 300 ? joined.slice(0, 297) + '…' : joined;
+    const summary = joined.length > 300 ? joined.slice(0, 297) + '…' : joined;
+    return { summary, fullText };
   } catch {
-    return '';
+    return { summary: '', fullText: '' };
   }
 }
 
@@ -59,7 +61,8 @@ async function parseCategory(category, url) {
   if (!items.length) return null;
   // bản tin đầu tiên là mới nhất
   const latest = items[0];
-  const summary = latest.href ? await fetchSummary(latest.href) : '';
+  const detail = latest.href ? await fetchDetail(latest.href) : { summary: '', fullText: '' };
+  const summary = detail.summary;
   const { kind, severity } = classify(category, latest.title, summary);
 
   const issuedAt = latest.issuedAtIso;
@@ -67,12 +70,19 @@ async function parseCategory(category, url) {
     ? (Date.now() - new Date(issuedAt).getTime()) / 3_600_000
     : null;
 
+  // vùng ảnh hưởng (từ tiêu đề + toàn văn)
+  const regions = regionsInText(`${latest.title} ${detail.fullText}`);
+  // với bão/ATNĐ: trích vị trí tâm + đường đi
+  const storm = category === 'storm' ? parseStorm(detail.fullText) : null;
+
   return {
     category,
     kind,
     severity,
     title: latest.title,
     summary,
+    regions,
+    storm,
     sourceUrl: latest.href || url,
     issuedAt,
     ageHours: ageHours == null ? null : Math.round(ageHours * 10) / 10,
