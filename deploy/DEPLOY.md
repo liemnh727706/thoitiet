@@ -44,8 +44,36 @@ sudo nginx -t && sudo systemctl reload nginx
 ```
 
 **Cách B – Dùng chung domain app cũ, thêm path `/weather/`:**
-Mở file cấu hình nginx của app cũ, dán `location /weather/ {...}` (phần comment cuối `nginx-weather.conf`) vào trong `server {}` khối 443, rồi `sudo nginx -t && sudo nginx -s reload`.
-App sẽ gọi `https://<domain>/weather/api/...`
+Trước tiên xác định nginx app cũ chạy dạng nào:
+```bash
+docker ps        # có container nginx không? ghi lại TÊN container + network
+```
+
+- **B1 — nginx là tiến trình HOST** (`which nginx` có, không thấy container nginx):
+  giữ nguyên `docker-compose.yml` (bind `127.0.0.1:4000`). Thêm vào `server{}` khối 443 của app cũ:
+  ```nginx
+  location /weather/ { proxy_pass http://127.0.0.1:4000/; proxy_set_header Host $host; }
+  ```
+  `sudo nginx -t && sudo systemctl reload nginx`
+
+- **B2 — nginx là CONTAINER Docker** (phổ biến với compose): `127.0.0.1` trong container KHÔNG phải host,
+  nên phải cho weather **vào chung network** rồi proxy theo tên container. Tìm network:
+  ```bash
+  docker inspect <nginx_container> --format '{{json .NetworkSettings.Networks}}'
+  ```
+  Sửa `docker-compose.yml` của weather: bỏ `ports`, thêm:
+  ```yaml
+      networks: [shared_net]
+  networks:
+    shared_net:
+      external: true
+      name: <ten_network_cua_app_cu>
+  ```
+  Trong nginx app cũ thêm: `location /weather/ { proxy_pass http://weather_server:4000/; proxy_set_header Host $host; }`
+  rồi `docker exec <nginx_container> nginx -s reload`.
+
+> Dấu `/` cuối trong `proxy_pass .../` sẽ cắt tiền tố `/weather` → backend nhận đúng `/api/...`.
+> App gọi `https://<domain>/weather/api/...` (đặt `API_BASE=https://<domain>/weather`).
 
 ## Bước 4 — HTTPS (bắt buộc cho app production trên Play Store)
 - **Có domain:** dùng Let's Encrypt:
