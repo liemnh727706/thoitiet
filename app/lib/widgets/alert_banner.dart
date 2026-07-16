@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/weather.dart';
 import '../theme/weather_gradients.dart';
 import '../utils/weather_icons.dart';
@@ -68,8 +69,33 @@ class _AlertTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(alert.message, style: TextStyle(color: fg.withValues(alpha: 0.95), fontSize: 13, height: 1.3)),
+                if (alert.official) _officialFooter(fg),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Dòng nguồn chính thức + thời gian phát tin (chỉ cho bản tin NCHMF)
+  Widget _officialFooter(Color fg) {
+    final parts = <String>['Nguồn chính thức: NCHMF'];
+    if (alert.issuedAt != null) {
+      parts.add('phát ${DateFormat('HH:mm dd/MM').format(alert.issuedAt!.toLocal())}');
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Icon(Icons.verified_rounded, color: fg.withValues(alpha: 0.9), size: 14),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(parts.join(' · '),
+                style: TextStyle(
+                    color: fg.withValues(alpha: 0.9),
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic)),
           ),
         ],
       ),

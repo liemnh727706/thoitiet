@@ -11,6 +11,13 @@ app/.flutter-plugins-dependencies
 **/*.iml
 .idea/
 
+# Secrets (Firebase / FCM) - KHÔNG commit khóa
+**/secrets/
+**/firebase-sa.json
+**/google-services.json
+**/GoogleService-Info.plist
+app/lib/firebase_options.dart
+
 # OS
 Thumbs.db
 .DS_Store

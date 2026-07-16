@@ -58,6 +58,9 @@ class WeatherAlert {
   final String title;
   final String message;
   final String source;
+  final String? sourceUrl;
+  final DateTime? issuedAt;
+  final bool official;    // true nếu là bản tin chính thức NCHMF
 
   WeatherAlert({
     required this.kind,
@@ -65,6 +68,9 @@ class WeatherAlert {
     required this.title,
     required this.message,
     required this.source,
+    this.sourceUrl,
+    this.issuedAt,
+    this.official = false,
   });
 
   factory WeatherAlert.fromJson(Map<String, dynamic> j) => WeatherAlert(
@@ -73,6 +79,9 @@ class WeatherAlert {
         title: j['title'] ?? '',
         message: j['message'] ?? '',
         source: j['source'] ?? '',
+        sourceUrl: j['sourceUrl'],
+        issuedAt: j['issuedAt'] != null ? DateTime.tryParse(j['issuedAt']) : null,
+        official: j['official'] ?? false,
       );
 }
 

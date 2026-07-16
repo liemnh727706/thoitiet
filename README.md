@@ -33,8 +33,14 @@ curl "http://localhost:4000/api/weather?lat=10.76&lon=106.68&place=TP.HCM"
 
 **2. App** — xem [app/README.md](app/README.md).
 
+## Endpoint backend
+- `GET /api/weather?lat=&lon=&place=` — thời tiết 3 tầng, đã ghép cảnh báo NCHMF vào `alerts`
+- `GET /api/warnings` — cảnh báo chính thức NCHMF (bão/ATNĐ, nắng nóng, không khí lạnh)
+- `GET /api/geocode?q=` — tìm địa danh
+
 ## Lộ trình
 1. ✅ **MVP** — Open-Meteo, UI 3 tầng, GPS + tìm kiếm.
-2. ⏭ Crawler **NCHMF** (bản tin bão, nắng nóng, không khí lạnh) + push FCM.
+2. ✅ **Crawler NCHMF** (bão/ATNĐ, nắng nóng, không khí lạnh) ghép vào cảnh báo chính thức.
+   Push **FCM** đã sẵn code phía server (inert) — kích hoạt theo [deploy/FCM_SETUP.md](deploy/FCM_SETUP.md).
 3. ⏭ Bão **JMA/JTWC** + bản đồ radar **RainViewer**.
 4. ⏭ **Xâm nhập mặn** (SIWRR/MRC) + ngập lụt.
