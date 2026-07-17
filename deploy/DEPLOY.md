@@ -115,5 +115,12 @@ Mở app trên điện thoại (khác WiFi/4G) → phải ra dữ liệu.
 
 ## Cập nhật code sau này
 ```bash
-cd ~/thoitiet && git pull && docker compose up -d --build
+cd ~/thoitiet && git pull && docker compose up -d --build && docker restart cropguard_nginx
 ```
+
+> ⚠️ **Vì sao phải `docker restart cropguard_nginx`?** nginx (chạy trong container B2)
+> phân giải tên `weather_server` MỘT LẦN lúc khởi động và nhớ IP. Mỗi lần
+> `docker compose up -d --build` tạo lại container weather_server với **IP mới**,
+> nginx vẫn trỏ IP cũ → **502 Bad Gateway**. Restart nginx để nó phân giải lại IP hiện tại.
+> (Cách triệt để: thêm `resolver 127.0.0.11 valid=30s;` + dùng biến trong `proxy_pass`
+> để nginx phân giải mỗi request, khỏi cần restart.)
