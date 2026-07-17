@@ -38,14 +38,32 @@ const RELEVANT_KEYWORDS = {
 
 const NATIONAL_KEYWORDS = ['cả nước', 'toàn quốc', 'trên phạm vi cả nước'];
 
-// Phát hiện các vùng được nhắc trong text (để hiển thị "Ảnh hưởng: ...").
+// Bảng tỉnh -> vùng (để suy ra vùng khi bản tin chỉ nêu tên tỉnh, vd lũ/mặn).
+const PROVINCE_REGION = {
+  BAC_BO: ['Hà Nội', 'Hải Phòng', 'Quảng Ninh', 'Lào Cai', 'Yên Bái', 'Điện Biên',
+    'Lai Châu', 'Sơn La', 'Hòa Bình', 'Hà Giang', 'Cao Bằng', 'Bắc Kạn', 'Lạng Sơn',
+    'Tuyên Quang', 'Thái Nguyên', 'Phú Thọ', 'Bắc Giang', 'Bắc Ninh', 'Vĩnh Phúc',
+    'Hưng Yên', 'Hải Dương', 'Thái Bình', 'Hà Nam', 'Nam Định', 'Ninh Bình'],
+  BAC_TRUNG_BO: ['Thanh Hóa', 'Nghệ An', 'Hà Tĩnh', 'Quảng Bình', 'Quảng Trị', 'Huế'],
+  TRUNG_TRUNG_BO: ['Đà Nẵng', 'Quảng Nam', 'Quảng Ngãi', 'Bình Định'],
+  NAM_TRUNG_BO: ['Phú Yên', 'Khánh Hòa', 'Ninh Thuận', 'Bình Thuận'],
+  TAY_NGUYEN: ['Kon Tum', 'Gia Lai', 'Đắk Lắk', 'Đắk Nông', 'Lâm Đồng'],
+  NAM_BO: ['Hồ Chí Minh', 'Bà Rịa', 'Vũng Tàu', 'Đồng Nai', 'Bình Dương', 'Bình Phước',
+    'Tây Ninh', 'Long An', 'Tiền Giang', 'Bến Tre', 'Trà Vinh', 'Vĩnh Long', 'Đồng Tháp',
+    'An Giang', 'Kiên Giang', 'Cần Thơ', 'Hậu Giang', 'Sóc Trăng', 'Bạc Liêu', 'Cà Mau'],
+};
+
+// Phát hiện các vùng được nhắc trong text (theo tên vùng HOẶC tên tỉnh).
 export function regionsInText(text) {
   const t = (text || '').normalize('NFC');
-  const found = [];
+  const found = new Set();
   for (const [code, name] of Object.entries(REGIONS)) {
-    if (t.includes(name)) found.push(code);
+    if (t.includes(name)) found.add(code);
   }
-  return found;
+  for (const [code, provinces] of Object.entries(PROVINCE_REGION)) {
+    if (provinces.some((p) => t.includes(p))) found.add(code);
+  }
+  return [...found];
 }
 
 // Cảnh báo có liên quan tới vùng người dùng không?
@@ -55,6 +73,10 @@ export function regionsInText(text) {
 //  - Không phát hiện được vùng nào trong text: mặc định HIỂN THỊ (không giấu tin chính thức).
 export function isRelevant(userRegionCode, warning) {
   if (warning.kind === 'storm') return true;
+  // Xâm nhập mặn: chỉ liên quan ĐBSCL (Nam Bộ); chưa biết vị trí -> vẫn hiện.
+  if (warning.kind === 'salinity') {
+    return !userRegionCode || userRegionCode === 'NAM_BO';
+  }
   const text = `${warning.title || ''} ${warning.summary || ''}`.normalize('NFC');
   if (NATIONAL_KEYWORDS.some((k) => text.includes(k))) return true;
   const detected = regionsInText(text);

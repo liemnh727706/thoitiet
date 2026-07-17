@@ -47,4 +47,4 @@ curl "http://localhost:4000/api/weather?lat=10.76&lon=106.68&place=TP.HCM"
    Push **FCM** đã sẵn code phía server (inert) — kích hoạt theo [deploy/FCM_SETUP.md](deploy/FCM_SETUP.md).
 3. ✅ **Lọc cảnh báo theo vùng GPS** + **bản đồ radar mưa RainViewer** + vị trí bão.
 4. ✅ **Đường đi bão dự báo nhiều điểm (JMA bosai)** — track hiện tại + +24/48/72h + đường đã đi, ghép với vị trí NCHMF, vẽ trên `RadarScreen`.
-5. ⏭ **Xâm nhập mặn** (SIWRR/MRC) + ngập lụt.
+5. ✅ **Ngập lụt + xâm nhập mặn** — crawl bản tin NCHMF (lũ/ngập lụt, lũ quét-sạt lở, xâm nhập mặn), lọc theo vùng/tỉnh, ghép vào cảnh báo chính thức + push FCM. Mặn theo mùa khô (T12–5), chỉ hiện cho Nam Bộ.

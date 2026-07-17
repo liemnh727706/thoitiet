@@ -35,6 +35,22 @@ function coldSeverity(title, body) {
   return 'watch';
 }
 
+// Mức độ cho tin LŨ / NGẬP LỤT / LŨ QUÉT
+function floodSeverity(title) {
+  const t = up(title);
+  if (t.includes('KHẨN CẤP')) return 'danger';
+  if (t.includes('LŨ QUÉT') || t.includes('SẠT LỞ') || t.includes('SỤT LÚN')) return 'warning';
+  if (t.includes('LŨ') || t.includes('NGẬP')) return 'warning';
+  return 'watch';
+}
+
+// Mức độ cho tin XÂM NHẬP MẶN
+function salinitySeverity(title, body) {
+  const t = up(title + ' ' + body);
+  if (t.includes('SÂU') || t.includes('NGHIÊM TRỌNG') || t.includes('GAY GẮT')) return 'warning';
+  return 'watch';
+}
+
 export function classify(category, title, body = '') {
   switch (category) {
     case 'storm':
@@ -43,6 +59,11 @@ export function classify(category, title, body = '') {
       return { kind: 'heat', severity: heatSeverity(title, body) };
     case 'cold':
       return { kind: 'cold', severity: coldSeverity(title, body) };
+    case 'flood':
+    case 'flashflood':
+      return { kind: 'flood', severity: floodSeverity(title) };
+    case 'salinity':
+      return { kind: 'salinity', severity: salinitySeverity(title, body) };
     default:
       return { kind: 'other', severity: 'watch' };
   }

@@ -13,6 +13,15 @@ const CATEGORY_PAGES = {
   storm: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/bao-ap-thap-nhiet-doi-2049-15.html',
   heat: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/nang-nong-2051-15.html',
   cold: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/khong-khi-lanh-2050-15.html',
+  flood: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/lu-ngap-lut-16-18.html',
+  flashflood: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/lu-quet-17-18.html',
+  salinity: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/xam-nhap-man-20-18.html',
+};
+
+// Số bản tin (đã khử trùng theo tiêu đề) lấy tối đa mỗi loại:
+// lũ có thể nhiều vùng cùng lúc; loại quốc gia/đơn lẻ chỉ lấy bản mới nhất.
+const MAX_PER_CATEGORY = {
+  storm: 2, heat: 1, cold: 1, flood: 3, flashflood: 1, salinity: 2,
 };
 
 async function getHtml(url) {
@@ -40,62 +49,69 @@ async function fetchDetail(detailUrl) {
   }
 }
 
-// Parse 1 trang chuyên mục -> bản tin mới nhất (hoặc null nếu "Đang cập nhật")
+// Parse 1 trang chuyên mục -> danh sách bản tin (khử trùng theo tiêu đề, giữ
+// bản mới nhất, giới hạn theo MAX_PER_CATEGORY). Link chi tiết luôn chứa "post".
 async function parseCategory(category, url) {
   const html = await getHtml(url);
   const $ = cheerio.load(html);
 
-  // mỗi bản tin nằm trong .grp-list-item ul li; link tiêu đề ở .text-weather-location a
-  const items = [];
-  $('.grp-list-item ul li').each((_, li) => {
-    const a = $(li).find('.text-weather-location a').first();
-    const rawText = a.text().replace(/\s+/g, ' ').trim();
-    if (!rawText || /đang cập nhật/i.test(rawText)) return;
-    const href = a.attr('href');
+  const raw = [];
+  const seenHref = new Set();
+  $('a[href*="post"]').each((_, a) => {
+    const rawText = $(a).text().replace(/\s+/g, ' ').trim();
+    const href = $(a).attr('href');
+    if (!rawText || !href || seenHref.has(href)) return;
+    if (/đang cập nhật/i.test(rawText)) return;
     const issuedAtIso = parseIssuedAt(rawText);
-    // tiêu đề = phần trước dấu "("
+    if (!issuedAtIso) return; // chỉ lấy link có ngày giờ = bản tin thật
+    seenHref.add(href);
     const title = rawText.replace(/\(.*$/, '').trim();
-    if (title) items.push({ title, href, issuedAtIso });
+    if (title) raw.push({ title, href, issuedAtIso });
   });
+  if (!raw.length) return [];
 
-  if (!items.length) return null;
-  // bản tin đầu tiên là mới nhất
-  const latest = items[0];
-  const detail = latest.href ? await fetchDetail(latest.href) : { summary: '', fullText: '' };
-  const summary = detail.summary;
-  const { kind, severity } = classify(category, latest.title, summary);
+  // khử trùng theo tiêu đề, giữ bản mới nhất
+  const byTitle = new Map();
+  for (const it of raw) {
+    const key = it.title.normalize('NFC');
+    const ex = byTitle.get(key);
+    if (!ex || new Date(it.issuedAtIso) > new Date(ex.issuedAtIso)) byTitle.set(key, it);
+  }
+  const distinct = [...byTitle.values()]
+    .sort((a, b) => new Date(b.issuedAtIso) - new Date(a.issuedAtIso))
+    .slice(0, MAX_PER_CATEGORY[category] ?? 2);
 
-  const issuedAt = latest.issuedAtIso;
-  const ageHours = issuedAt
-    ? (Date.now() - new Date(issuedAt).getTime()) / 3_600_000
-    : null;
-
-  // vùng ảnh hưởng (từ tiêu đề + toàn văn)
-  const regions = regionsInText(`${latest.title} ${detail.fullText}`);
-  // với bão/ATNĐ: trích vị trí tâm + đường đi
-  const storm = category === 'storm' ? parseStorm(detail.fullText) : null;
-
-  return {
-    category,
-    kind,
-    severity,
-    title: latest.title,
-    summary,
-    regions,
-    storm,
-    sourceUrl: latest.href || url,
-    issuedAt,
-    ageHours: ageHours == null ? null : Math.round(ageHours * 10) / 10,
-    source: 'NCHMF - nchmf.gov.vn',
-  };
+  const out = [];
+  for (const it of distinct) {
+    const detail = await fetchDetail(it.href);
+    const { kind, severity } = classify(category, it.title, detail.summary);
+    const ageHours = (Date.now() - new Date(it.issuedAtIso).getTime()) / 3_600_000;
+    const regions = regionsInText(`${it.title} ${detail.fullText}`);
+    const storm = category === 'storm' ? parseStorm(detail.fullText) : null;
+    out.push({
+      category,
+      kind,
+      severity,
+      title: it.title,
+      summary: detail.summary,
+      regions,
+      storm,
+      sourceUrl: it.href,
+      issuedAt: it.issuedAtIso,
+      ageHours: Math.round(ageHours * 10) / 10,
+      source: 'NCHMF - nchmf.gov.vn',
+    });
+  }
+  return out;
 }
 
 // Ngưỡng "còn hiệu lực" (giờ) theo loại tin. Có thể override tất cả bằng env
 // NCHMF_FRESH_HOURS (hữu ích để tinh chỉnh hoặc demo).
 const OVERRIDE = process.env.NCHMF_FRESH_HOURS ? Number(process.env.NCHMF_FRESH_HOURS) : null;
+const DEFAULT_FRESH = { storm: 48, heat: 30, cold: 36, flood: 36, flashflood: 36, salinity: 192 };
 const FRESH_HOURS = OVERRIDE
-  ? { storm: OVERRIDE, heat: OVERRIDE, cold: OVERRIDE }
-  : { storm: 48, heat: 30, cold: 36 };
+  ? Object.fromEntries(Object.keys(DEFAULT_FRESH).map((k) => [k, OVERRIDE]))
+  : DEFAULT_FRESH;
 
 // Lấy toàn bộ cảnh báo NCHMF. Trả { all: [...], active: [...] }
 export async function fetchNchmfWarnings() {
@@ -105,11 +121,11 @@ export async function fetchNchmfWarnings() {
 
   const all = [];
   for (const r of results) {
-    if (r.status === 'fulfilled' && r.value) {
-      const w = r.value;
-      w.stale =
-        w.ageHours != null && w.ageHours > (FRESH_HOURS[w.category] ?? 36);
-      all.push(w);
+    if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+      for (const w of r.value) {
+        w.stale = w.ageHours != null && w.ageHours > (FRESH_HOURS[w.category] ?? 36);
+        all.push(w);
+      }
     }
   }
   const active = all.filter((w) => !w.stale);
