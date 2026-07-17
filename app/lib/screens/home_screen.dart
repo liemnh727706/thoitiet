@@ -9,6 +9,7 @@ import '../widgets/current_weather_card.dart';
 import '../widgets/detail_grid.dart';
 import '../widgets/hourly_forecast.dart';
 import '../widgets/daily_forecast.dart';
+import '../widgets/hydro_card.dart';
 import 'search_screen.dart';
 import 'radar_screen.dart';
 
@@ -114,6 +115,11 @@ class HomeScreen extends StatelessWidget {
           CurrentWeatherCard(current: data.current),
           const SizedBox(height: 24),
           DetailGrid(current: data.current, today: today),
+          // Ngập lụt & xâm nhập mặn (ĐBSCL / vùng có dữ liệu Thủy lợi)
+          if (data.hydro != null) ...[
+            const SizedBox(height: 16),
+            HydroCard(hydro: data.hydro!),
+          ],
           const SizedBox(height: 16),
           // TẦNG 3 - dự báo
           HourlyForecast(hourly: data.hourly),

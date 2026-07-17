@@ -10,6 +10,7 @@ class WeatherResponse {
   final CurrentWeather current;
   final List<HourlyItem> hourly;
   final List<DailyItem> daily;
+  final Hydro? hydro;
 
   WeatherResponse({
     this.place,
@@ -21,6 +22,7 @@ class WeatherResponse {
     required this.current,
     required this.hourly,
     required this.daily,
+    this.hydro,
   });
 
   factory WeatherResponse.fromJson(Map<String, dynamic> j) {
@@ -41,6 +43,7 @@ class WeatherResponse {
       daily: (j['daily'] as List? ?? [])
           .map((e) => DailyItem.fromJson(e))
           .toList(),
+      hydro: j['hydro'] != null ? Hydro.fromJson(j['hydro']) : null,
     );
   }
 }
@@ -207,6 +210,44 @@ class DailyItem {
         uvIndexMax: j['uvIndexMax'],
         icon: j['icon'] ?? 'cloudy',
         condition: j['condition'] ?? '',
+      );
+}
+
+class SalinityStation {
+  final String? name;
+  final String? code;
+  final String? level;
+  final num? salinityGl;
+  final num? distanceKm;
+  SalinityStation({this.name, this.code, this.level, this.salinityGl, this.distanceKm});
+  factory SalinityStation.fromJson(Map<String, dynamic> j) => SalinityStation(
+        name: j['name'],
+        code: j['code'],
+        level: j['level'],
+        salinityGl: j['salinity_gl'],
+        distanceKm: j['distanceKm'],
+      );
+}
+
+class FloodProvince {
+  final String province;
+  final num? floodedArea;
+  FloodProvince({required this.province, this.floodedArea});
+  factory FloodProvince.fromJson(Map<String, dynamic> j) => FloodProvince(
+        province: j['province'] ?? '',
+        floodedArea: j['floodedArea'],
+      );
+}
+
+class Hydro {
+  final SalinityStation? salinity;
+  final List<FloodProvince> flood;
+  final String? source;
+  Hydro({this.salinity, this.flood = const [], this.source});
+  factory Hydro.fromJson(Map<String, dynamic> j) => Hydro(
+        salinity: j['salinity'] != null ? SalinityStation.fromJson(j['salinity']) : null,
+        flood: (j['flood'] as List? ?? []).map((e) => FloodProvince.fromJson(e)).toList(),
+        source: j['source'],
       );
 }
 

@@ -5,6 +5,7 @@ import { getRadar } from '../services/radar.service.js';
 import { getCachedJmaStorms } from '../services/jma.service.js';
 import { sendTest } from '../services/push.service.js';
 import { resolveRegion, isRelevant } from '../utils/vnRegion.js';
+import { hydroFor } from '../services/thuyloi.service.js';
 import { aggregate } from '../utils/aggregate.js';
 
 // Chuẩn hoá bão NCHMF về cùng shape với JMA (cho /api/storms)
@@ -68,6 +69,26 @@ export async function getWeather(req, res) {
     const official = peekWarnings()
       .active.filter((w) => isRelevant(region?.code, w))
       .map(toAlert);
+
+    // Thủy văn ĐBSCL (mặn theo trạm gần nhất + ngập theo tỉnh/vùng)
+    const hydro = hydroFor(lat, lon, region?.code);
+    result.hydro = hydro;
+
+    // Mặn vượt ngưỡng cây trồng (>=4 g/l) -> thêm cảnh báo chính thức
+    const sal = hydro?.salinity;
+    if (sal && sal.salinity_gl != null && sal.salinity_gl >= 4) {
+      official.unshift({
+        kind: 'salinity',
+        severity: sal.salinity_gl >= 10 ? 'danger' : 'warning',
+        title: `Xâm nhập mặn tại ${sal.name || 'trạm gần bạn'}`,
+        message: `Độ mặn ${sal.salinity_gl} g/l (${sal.level}) — vượt ngưỡng cây trồng 4 g/l.`,
+        source: 'Cục Thủy lợi VN',
+        sourceUrl: 'https://thuyloivietnam.gov.vn/dwh',
+        official: true,
+        regions: region ? [region.code] : [],
+      });
+    }
+
     result.alerts = [...official, ...result.alerts];
     result.region = region;
 
@@ -150,6 +171,17 @@ export async function pushTest(req, res) {
     console.error('[pushTest]', err.message);
     res.status(502).json({ error: err.message });
   }
+}
+
+// GET /api/hydro?lat=&lon= — thủy văn ĐBSCL (mặn trạm gần nhất + ngập theo vùng)
+export async function getHydro(req, res) {
+  const lat = parseFloat(req.query.lat);
+  const lon = parseFloat(req.query.lon);
+  if (Number.isNaN(lat) || Number.isNaN(lon)) {
+    return res.status(400).json({ error: 'Thiếu lat/lon' });
+  }
+  const region = resolveRegion(lat, lon);
+  res.json({ region, hydro: hydroFor(lat, lon, region?.code) });
 }
 
 // GET /api/geocode?q=..

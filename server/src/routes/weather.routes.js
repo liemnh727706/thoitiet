@@ -6,6 +6,7 @@ import {
   getRadarFrames,
   getStorm,
   getStorms,
+  getHydro,
   pushTest,
 } from '../controllers/weather.controller.js';
 
@@ -16,6 +17,7 @@ router.get('/warnings', getWarnings);
 router.get('/radar', getRadarFrames);
 router.get('/storm', getStorm);
 router.get('/storms', getStorms);
+router.get('/hydro', getHydro);
 router.get('/push-test', pushTest);
 router.get('/geocode', searchPlace);
 

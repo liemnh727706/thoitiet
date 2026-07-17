@@ -3,6 +3,7 @@ import cors from 'cors';
 import { config } from './config.js';
 import weatherRoutes from './routes/weather.routes.js';
 import { startWarningPoll } from './services/nchmf.service.js';
+import { startThuyloiPoll } from './services/thuyloi.service.js';
 import { onNewWarnings, initPush } from './services/push.service.js';
 
 const app = express();
@@ -33,4 +34,7 @@ app.listen(config.port, () => {
 
   // Poll cảnh báo NCHMF; khi có cảnh báo ACTIVE mới -> đẩy FCM (nếu đã cấu hình)
   startWarningPoll(onNewWarnings);
+
+  // Poll thủy văn ĐBSCL (mặn + ngập) từ Cục Thủy lợi
+  startThuyloiPoll();
 });

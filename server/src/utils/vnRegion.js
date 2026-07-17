@@ -53,6 +53,15 @@ const PROVINCE_REGION = {
     'An Giang', 'Kiên Giang', 'Cần Thơ', 'Hậu Giang', 'Sóc Trăng', 'Bạc Liêu', 'Cà Mau'],
 };
 
+// Mã vùng của 1 tỉnh (theo tên). Trả null nếu không khớp.
+export function provinceRegion(name) {
+  const t = (name || '').normalize('NFC');
+  for (const [code, provinces] of Object.entries(PROVINCE_REGION)) {
+    if (provinces.some((p) => t.includes(p))) return code;
+  }
+  return null;
+}
+
 // Phát hiện các vùng được nhắc trong text (theo tên vùng HOẶC tên tỉnh).
 export function regionsInText(text) {
   const t = (text || '').normalize('NFC');

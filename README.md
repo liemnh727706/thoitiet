@@ -38,6 +38,7 @@ curl "http://localhost:4000/api/weather?lat=10.76&lon=106.68&place=TP.HCM"
 - `GET /api/warnings` — cảnh báo chính thức NCHMF toàn quốc (kèm vùng ảnh hưởng)
 - `GET /api/radar` — frame radar mưa RainViewer (tile cho bản đồ)
 - `GET /api/storms` — bão đang hoạt động: **đường đi dự báo nhiều điểm (JMA)** + vị trí VN (NCHMF)
+- `GET /api/hydro?lat=&lon=` — thủy văn ĐBSCL: **độ mặn trạm gần nhất + diện tích ngập theo tỉnh** (Cục Thủy lợi VN)
 - `GET /api/storm` — (cũ) vị trí bão đơn từ NCHMF
 - `GET /api/geocode?q=` — tìm địa danh
 
