@@ -1,44 +1,64 @@
 import 'package:flutter/material.dart';
 
-// Gradient nền động theo tình trạng thời tiết + ngày/đêm.
-// Cảm hứng từ breezy-weather: nền chuyển màu theo cảnh vật.
+// Gradient nền động theo thời tiết + ngày/đêm, phân biệt rõ:
+// nắng / nhiều mây / mưa nhỏ / mưa lớn / dông, và biến thể ban đêm.
 class WeatherGradients {
   static List<Color> forCondition(String icon, {required bool isDay}) {
-    if (!isDay) {
-      // Ban đêm: tông xanh đêm cho hầu hết trạng thái
-      switch (icon) {
-        case 'thunderstorm':
-          return [const Color(0xFF1A1A2E), const Color(0xFF16213E)];
-        case 'rain':
-        case 'heavy_rain':
-        case 'showers':
-        case 'drizzle':
-          return [const Color(0xFF203A43), const Color(0xFF2C5364)];
-        default:
-          return [const Color(0xFF0F2027), const Color(0xFF203A43)];
-      }
+    if (!isDay) return _night(icon);
+    return _day(icon);
+  }
+
+  static List<Color> _day(String icon) {
+    switch (icon) {
+      case 'clear':
+        return const [Color(0xFF1E6FE0), Color(0xFF4A9BF0), Color(0xFF8FC8FF)];
+      case 'mostly_clear':
+        return const [Color(0xFF2E7BD6), Color(0xFF5CA3E8), Color(0xFF9AC8F0)];
+      case 'partly_cloudy':
+        return const [Color(0xFF4E85B8), Color(0xFF7FA8CC), Color(0xFFA9C4DA)];
+      case 'cloudy':
+        return const [Color(0xFF63717F), Color(0xFF8493A1), Color(0xFFAAB6C1)];
+      case 'fog':
+        return const [Color(0xFF8A97A3), Color(0xFFAAB5BF), Color(0xFFCAD2D9)];
+      case 'drizzle':
+        return const [Color(0xFF5A7686), Color(0xFF7C97A7), Color(0xFF9DB2BF)];
+      case 'rain':
+      case 'showers':
+        return const [Color(0xFF3E5563), Color(0xFF5B7686), Color(0xFF7A93A1)];
+      case 'heavy_rain':
+        return const [Color(0xFF2A3A45), Color(0xFF3E5462), Color(0xFF556B78)];
+      case 'thunderstorm':
+        return const [Color(0xFF23262F), Color(0xFF3A4150), Color(0xFF515A6B)];
+      case 'snow':
+      case 'sleet':
+        return const [Color(0xFF7E93A6), Color(0xFFA6B8C8), Color(0xFFD2DDE6)];
+      default:
+        return const [Color(0xFF4E85B8), Color(0xFF7FA8CC), Color(0xFFA9C4DA)];
     }
+  }
+
+  static List<Color> _night(String icon) {
     switch (icon) {
       case 'clear':
       case 'mostly_clear':
-        return [const Color(0xFF2196F3), const Color(0xFF64B5F6)];
+        return const [Color(0xFF07152F), Color(0xFF122246), Color(0xFF24365F)];
       case 'partly_cloudy':
-        return [const Color(0xFF4B79A1), const Color(0xFF7EA6C7)];
+        return const [Color(0xFF10203A), Color(0xFF1E3352), Color(0xFF35496A)];
       case 'cloudy':
       case 'fog':
-        return [const Color(0xFF616E7D), const Color(0xFF8A99A8)];
+        return const [Color(0xFF1C232D), Color(0xFF2E3A48), Color(0xFF44515F)];
       case 'drizzle':
       case 'rain':
       case 'showers':
-        return [const Color(0xFF3A6073), const Color(0xFF5B8CA5)];
+        return const [Color(0xFF12222B), Color(0xFF1E3540), Color(0xFF2E4A56)];
       case 'heavy_rain':
       case 'thunderstorm':
-        return [const Color(0xFF2C3E50), const Color(0xFF4A6278)];
+        return const [Color(0xFF0C1116), Color(0xFF1A2029), Color(0xFF2A323F)];
       case 'snow':
       case 'sleet':
-        return [const Color(0xFF6D8299), const Color(0xFFA5B8C9)];
+        return const [Color(0xFF243244), Color(0xFF39495E), Color(0xFF556678)];
       default:
-        return [const Color(0xFF4B79A1), const Color(0xFF7EA6C7)];
+        return const [Color(0xFF0F2027), Color(0xFF1B2E38), Color(0xFF2C4A57)];
     }
   }
 }

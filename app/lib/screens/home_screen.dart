@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/weather_provider.dart';
-import '../theme/weather_gradients.dart';
 import '../utils/formatters.dart';
+import '../widgets/weather_background.dart';
 import '../widgets/alert_banner.dart';
 import '../widgets/current_weather_card.dart';
 import '../widgets/detail_grid.dart';
@@ -22,7 +22,6 @@ class HomeScreen extends StatelessWidget {
         final data = provider.data;
         final isDay = data?.current.isDay ?? true;
         final icon = data?.current.icon ?? 'clear';
-        final gradient = WeatherGradients.forCondition(icon, isDay: isDay);
 
         return Scaffold(
           extendBodyBehindAppBar: true,
@@ -70,14 +69,10 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: gradient,
-              ),
-            ),
+          body: WeatherBackground(
+            icon: icon,
+            isDay: isDay,
+            precipitation: data?.current.precipitation,
             child: SafeArea(
               child: _buildBody(context, provider),
             ),
