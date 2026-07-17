@@ -33,8 +33,8 @@ class _RadarScreenState extends State<RadarScreen> {
   late final bool _hasGps = widget.centerLat != null && widget.centerLon != null;
   late final LatLng _center =
       LatLng(widget.centerLat ?? 16.2, widget.centerLon ?? 107.8);
-  // Focus vào GPS: zoom gần hơn khi có vị trí người dùng.
-  late double _zoom = _hasGps ? 8.0 : 5.5;
+  // Focus vào GPS nhưng vẫn đủ rộng để thấy vùng mưa xung quanh.
+  late double _zoom = _hasGps ? 7.0 : 5.5;
 
   @override
   void initState() {
@@ -136,15 +136,15 @@ class _RadarScreenState extends State<RadarScreen> {
               userAgentPackageName: 'com.example.vn_weather',
               maxNativeZoom: 20,
             ),
-            // Radar mưa (frame hiện tại). maxNativeZoom = độ phân giải thực của
-            // RainViewer -> zoom sâu hơn thì phóng to tile, KHÔNG xin tile lỗi.
+            // Radar mưa (frame hiện tại). RainViewer phục vụ mọi zoom nên KHÔNG
+            // đặt maxNativeZoom (từng làm radar không hiển thị). Lỗi "zoom not
+            // supported" đã xử lý bằng base CartoDB + giới hạn maxZoom=12.
             if (frame != null)
               Opacity(
-                opacity: 0.7,
+                opacity: 0.75,
                 child: TileLayer(
                   urlTemplate: frame.url,
                   userAgentPackageName: 'com.example.vn_weather',
-                  maxNativeZoom: 8,
                   tileDisplay: const TileDisplay.instantaneous(),
                 ),
               ),
