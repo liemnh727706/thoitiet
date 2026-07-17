@@ -5,9 +5,13 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/weather.dart';
 import '../services/api_service.dart';
+import '../data/vn_places.dart';
 import '../utils/formatters.dart';
 
-// Bản đồ radar mưa (RainViewer) + đường đi bão dự báo (JMA) & vị trí bão (NCHMF).
+// Bản đồ radar mưa (RainViewer) + đường đi bão (JMA/NCHMF).
+// - Base map KHÔNG nhãn (CartoDB) -> bỏ hết tên nước ngoài.
+// - Nhãn địa danh tiếng Việt (đảo/quần đảo + thành phố) tự phủ lên.
+// - Focus vào vị trí GPS người dùng.
 class RadarScreen extends StatefulWidget {
   final double? centerLat;
   final double? centerLon;
@@ -25,6 +29,12 @@ class _RadarScreenState extends State<RadarScreen> {
   int _index = 0;
   bool _playing = false;
   Timer? _timer;
+
+  late final bool _hasGps = widget.centerLat != null && widget.centerLon != null;
+  late final LatLng _center =
+      LatLng(widget.centerLat ?? 16.2, widget.centerLon ?? 107.8);
+  // Focus vào GPS: zoom gần hơn khi có vị trí người dùng.
+  late double _zoom = _hasGps ? 8.0 : 5.5;
 
   @override
   void initState() {
@@ -66,7 +76,6 @@ class _RadarScreenState extends State<RadarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final center = LatLng(widget.centerLat ?? 16.2, widget.centerLon ?? 107.8);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bản đồ mưa & bão'),
@@ -77,7 +86,7 @@ class _RadarScreenState extends State<RadarScreen> {
           ? _errorView()
           : _radar == null
               ? const Center(child: CircularProgressIndicator())
-              : _buildMap(center),
+              : _buildMap(),
     );
   }
 
@@ -101,7 +110,7 @@ class _RadarScreenState extends State<RadarScreen> {
         ),
       );
 
-  Widget _buildMap(LatLng center) {
+  Widget _buildMap() {
     final frames = _radar!.frames;
     final frame = frames.isNotEmpty ? frames[_index] : null;
 
@@ -109,31 +118,52 @@ class _RadarScreenState extends State<RadarScreen> {
       children: [
         FlutterMap(
           options: MapOptions(
-            initialCenter: center,
-            initialZoom: 5.0,
+            initialCenter: _center,
+            initialZoom: _zoom,
             minZoom: 3,
-            maxZoom: 12,
+            maxZoom: 12, // radar thô, không cần zoom sâu -> tránh lỗi tile
+            onPositionChanged: (camera, _) {
+              if ((camera.zoom - _zoom).abs() > 0.25) {
+                setState(() => _zoom = camera.zoom);
+              }
+            },
           ),
           children: [
+            // Nền KHÔNG nhãn (bỏ tên nước ngoài)
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate:
+                  'https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.example.vn_weather',
+              maxNativeZoom: 20,
             ),
+            // Radar mưa (frame hiện tại). maxNativeZoom = độ phân giải thực của
+            // RainViewer -> zoom sâu hơn thì phóng to tile, KHÔNG xin tile lỗi.
             if (frame != null)
               Opacity(
                 opacity: 0.7,
                 child: TileLayer(
                   urlTemplate: frame.url,
                   userAgentPackageName: 'com.example.vn_weather',
+                  maxNativeZoom: 8,
                   tileDisplay: const TileDisplay.instantaneous(),
                 ),
               ),
-            // Đường đã đi (xám) của từng cơn
+            // Nhãn địa danh tiếng Việt
+            MarkerLayer(markers: _placeLabels()),
+            // Đường đã đi (xám) + đường dự báo (đỏ) của bão
             PolylineLayer(polylines: _pastPolylines()),
-            // Đường đi dự báo (đỏ) của từng cơn
             PolylineLayer(polylines: _forecastPolylines()),
-            // Marker: tâm hiện tại + các mốc dự báo
             MarkerLayer(markers: _stormMarkers()),
+            // Vị trí GPS người dùng
+            if (_hasGps)
+              MarkerLayer(markers: [
+                Marker(
+                  point: _center,
+                  width: 26,
+                  height: 26,
+                  child: const _UserDot(),
+                ),
+              ]),
           ],
         ),
         Positioned(left: 0, right: 0, bottom: 0, child: _controlPanel(frame)),
@@ -143,13 +173,24 @@ class _RadarScreenState extends State<RadarScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             color: Colors.white70,
-            child: const Text('Radar: RainViewer · Bão: JMA/NCHMF',
-                style: TextStyle(fontSize: 10, color: Colors.black87)),
+            child: const Text('Radar: RainViewer · Bão: JMA/NCHMF · Nền: CARTO',
+                style: TextStyle(fontSize: 9, color: Colors.black87)),
           ),
         ),
         if (_storms.isNotEmpty) _stormBanner(),
       ],
     );
+  }
+
+  List<Marker> _placeLabels() {
+    return vnPlaces.where((p) => _zoom >= p.minZoom).map((p) {
+      return Marker(
+        point: LatLng(p.lat, p.lon),
+        width: 140,
+        height: 26,
+        child: _PlaceLabel(name: p.name, island: p.island),
+      );
+    }).toList();
   }
 
   List<Polyline> _pastPolylines() {
@@ -158,7 +199,7 @@ class _RadarScreenState extends State<RadarScreen> {
       if (s.past.length > 1) {
         out.add(Polyline(
           points: s.past.map((p) => LatLng(p.lat, p.lon)).toList(),
-          color: Colors.white70,
+          color: Colors.blueGrey,
           strokeWidth: 2,
         ));
       }
@@ -288,6 +329,68 @@ class _RadarScreenState extends State<RadarScreen> {
     final now = DateTime.now();
     if (t.day == now.day) return '';
     return '${t.day}/${t.month}';
+  }
+}
+
+// Nhãn địa danh tiếng Việt
+class _PlaceLabel extends StatelessWidget {
+  final String name;
+  final bool island;
+  const _PlaceLabel({required this.name, required this.island});
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(island ? Icons.terrain_rounded : Icons.circle,
+            size: island ? 12 : 7,
+            color: island ? const Color(0xFF00695C) : const Color(0xFF1565C0)),
+        const SizedBox(width: 2),
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Text(name,
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+                softWrap: false,
+                style: TextStyle(
+                    fontSize: island ? 11 : 10,
+                    fontWeight: FontWeight.w600,
+                    color: island ? const Color(0xFF004D40) : const Color(0xFF0D47A1))),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Chấm vị trí người dùng
+class _UserDot extends StatelessWidget {
+  const _UserDot();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1565C0).withValues(alpha: 0.25),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1565C0),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+          ),
+        ),
+      ),
+    );
   }
 }
 
