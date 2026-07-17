@@ -9,7 +9,17 @@ Future<void> _bgHandler(RemoteMessage message) async {
   debugPrint('[FCM bg] ${message.notification?.title}');
 }
 
+// Nội dung 1 push để hiển thị banner in-app.
+class PushAlert {
+  final String title;
+  final String body;
+  PushAlert(this.title, this.body);
+}
+
 class PushService {
+  // Tín hiệu khi nhận push lúc app đang mở (foreground) -> UI lắng nghe để hiện banner.
+  static final ValueNotifier<PushAlert?> foreground = ValueNotifier<PushAlert?>(null);
+
   // Khởi tạo Firebase + đăng ký nhận cảnh báo. Bọc try/catch để nếu chưa
   // cấu hình (thiếu google-services.json) thì app vẫn chạy bình thường.
   static Future<void> init() async {
@@ -21,9 +31,11 @@ class PushService {
       await fm.requestPermission(); // Android 13+ và iOS xin quyền thông báo
       await fm.subscribeToTopic('weather-warnings'); // nhận cảnh báo NCHMF
 
-      // Foreground: log tiêu đề (có thể nâng cấp hiển thị banner trong app)
+      // Foreground: phát tín hiệu để UI hiện banner in-app + refresh cảnh báo.
       FirebaseMessaging.onMessage.listen((m) {
-        debugPrint('[FCM] ${m.notification?.title}');
+        final n = m.notification;
+        debugPrint('[FCM] foreground: ${n?.title}');
+        foreground.value = PushAlert(n?.title ?? 'Cảnh báo thời tiết', n?.body ?? '');
       });
       debugPrint('[FCM] Đã bật, subscribe topic weather-warnings');
     } catch (e) {
