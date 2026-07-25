@@ -62,6 +62,21 @@ export function provinceRegion(name) {
   return null;
 }
 
+// Bỏ tiền tố "Tỉnh"/"Thành phố" để so khớp lõi tên tỉnh.
+export function normProvince(name) {
+  return (name || '').normalize('NFC').replace(/^(Tỉnh|Thành phố)\s+/i, '').trim();
+}
+
+// Các tên tỉnh xuất hiện trong text (dùng để lọc cảnh báo theo đúng tỉnh).
+export function provincesInText(text) {
+  const t = (text || '').normalize('NFC');
+  const found = [];
+  for (const provinces of Object.values(PROVINCE_REGION)) {
+    for (const p of provinces) if (t.includes(p)) found.push(p);
+  }
+  return found;
+}
+
 // Phát hiện các vùng được nhắc trong text (theo tên vùng HOẶC tên tỉnh).
 export function regionsInText(text) {
   const t = (text || '').normalize('NFC');
@@ -80,7 +95,7 @@ export function regionsInText(text) {
 //  - Có từ khoá "cả nước"/"toàn quốc": liên quan tất cả.
 //  - Text nhắc đúng vùng người dùng (hoặc "Trung Bộ" cho các vùng Trung): liên quan.
 //  - Không phát hiện được vùng nào trong text: mặc định HIỂN THỊ (không giấu tin chính thức).
-export function isRelevant(userRegionCode, warning) {
+export function isRelevant(userRegionCode, warning, userProvince) {
   if (warning.kind === 'storm') return true;
   // Xâm nhập mặn: chỉ liên quan ĐBSCL (Nam Bộ); chưa biết vị trí -> vẫn hiện.
   if (warning.kind === 'salinity') {
@@ -91,6 +106,22 @@ export function isRelevant(userRegionCode, warning) {
   const detected = regionsInText(text);
   if (detected.length === 0) return true; // không rõ vùng -> vẫn hiển thị
   if (!userRegionCode) return true;        // không biết vị trí -> hiển thị hết
+
+  // 1) Lọc theo VÙNG (gồm "Trung Bộ" rộng, hoặc vùng suy từ tỉnh trong text)
   const keywords = RELEVANT_KEYWORDS[userRegionCode] || [];
-  return keywords.some((k) => text.includes(k));
+  const regionMatch = keywords.some((k) => text.includes(k)) || detected.includes(userRegionCode);
+  if (!regionMatch) return false;
+
+  // 2) Siết theo TỈNH: nếu bản tin nêu tỉnh cụ thể (không nêu tên vùng rộng)
+  //    và biết tỉnh người dùng -> chỉ hiện khi TRÚNG tỉnh (đúng vị trí GPS).
+  if (userProvince) {
+    const provinces = provincesInText(text);
+    const broad = ['Bắc Bộ', 'Trung Bộ', 'Nam Bộ', 'Tây Nguyên', 'cả nước', 'toàn quốc']
+      .some((w) => text.includes(w));
+    if (provinces.length && !broad) {
+      const core = normProvince(userProvince);
+      return provinces.some((p) => normProvince(p) === core) || text.includes(core);
+    }
+  }
+  return true;
 }

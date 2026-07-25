@@ -4,6 +4,7 @@ import { getCachedWarnings, peekWarnings } from '../services/nchmf.service.js';
 import { getRadar } from '../services/radar.service.js';
 import { getCachedJmaStorms } from '../services/jma.service.js';
 import { fetchAirQuality } from '../services/air.service.js';
+import { reverseProvince } from '../services/geoadmin.service.js';
 import { sendTest } from '../services/push.service.js';
 import { resolveRegion, isRelevant } from '../utils/vnRegion.js';
 import { hydroFor } from '../services/thuyloi.service.js';
@@ -60,9 +61,10 @@ export async function getWeather(req, res) {
   }
 
   try {
-    const [raw, air] = await Promise.all([
+    const [raw, air, admin] = await Promise.all([
       fetchForecast(lat, lon),
       fetchAirQuality(lat, lon).catch(() => null),
+      reverseProvince(lat, lon).catch(() => null),
     ]);
     const place = req.query.place
       ? { name: req.query.place }
@@ -70,10 +72,11 @@ export async function getWeather(req, res) {
     const result = aggregate(raw, place);
     result.airQuality = air;
 
-    // Ghép cảnh báo chính thức NCHMF, LỌC THEO VÙNG GPS của người dùng
+    // Ghép cảnh báo chính thức NCHMF, LỌC THEO VỊ TRÍ GPS (vùng + tỉnh mới)
     const region = resolveRegion(lat, lon);
+    const province = admin?.province || null;
     const official = peekWarnings()
-      .active.filter((w) => isRelevant(region?.code, w))
+      .active.filter((w) => isRelevant(region?.code, w, province))
       .map(toAlert);
 
     // Thủy văn ĐBSCL (mặn theo trạm gần nhất + ngập theo tỉnh/vùng)
@@ -97,6 +100,7 @@ export async function getWeather(req, res) {
 
     result.alerts = [...official, ...result.alerts];
     result.region = region;
+    result.location = { province, region: region?.name || null };
 
     setCache(key, result);
     res.json({ ...result, cached: false });

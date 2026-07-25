@@ -30,16 +30,29 @@ class HomeScreen extends StatelessWidget {
             backgroundColor: Colors.transparent,
             elevation: 0,
             foregroundColor: Colors.white,
-            title: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(provider.placeName,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                if (data != null)
-                  Text(formatUpdated(data.updatedAt),
-                      style: const TextStyle(fontSize: 11, color: Colors.white70)),
-              ],
-            ),
+            title: Builder(builder: (_) {
+              final province = data?.location?.province;
+              final generic = provider.placeName == 'Vị trí của bạn';
+              // Ưu tiên hiện đơn vị hành chính MỚI khi dùng GPS
+              final primary = (generic && province != null) ? province : provider.placeName;
+              final subParts = <String>[];
+              if (province != null && province != primary) subParts.add(province);
+              if (data != null) subParts.add(formatUpdated(data.updatedAt));
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(primary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  if (subParts.isNotEmpty)
+                    Text(subParts.join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                ],
+              );
+            }),
             centerTitle: true,
             leading: IconButton(
               icon: const Icon(Icons.my_location),

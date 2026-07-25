@@ -12,6 +12,7 @@ class WeatherResponse {
   final List<DailyItem> daily;
   final Hydro? hydro;
   final AirQuality? airQuality;
+  final LocationInfo? location;
 
   WeatherResponse({
     this.place,
@@ -25,6 +26,7 @@ class WeatherResponse {
     required this.daily,
     this.hydro,
     this.airQuality,
+    this.location,
   });
 
   factory WeatherResponse.fromJson(Map<String, dynamic> j) {
@@ -47,6 +49,7 @@ class WeatherResponse {
           .toList(),
       hydro: j['hydro'] != null ? Hydro.fromJson(j['hydro']) : null,
       airQuality: j['airQuality'] != null ? AirQuality.fromJson(j['airQuality']) : null,
+      location: j['location'] != null ? LocationInfo.fromJson(j['location']) : null,
     );
   }
 }
@@ -220,6 +223,14 @@ class DailyItem {
         icon: j['icon'] ?? 'cloudy',
         condition: j['condition'] ?? '',
       );
+}
+
+class LocationInfo {
+  final String? province; // tên đơn vị hành chính MỚI (34 tỉnh 2025)
+  final String? region;
+  LocationInfo({this.province, this.region});
+  factory LocationInfo.fromJson(Map<String, dynamic> j) =>
+      LocationInfo(province: j['province'], region: j['region']);
 }
 
 class SalinityStation {
