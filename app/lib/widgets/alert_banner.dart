@@ -34,8 +34,25 @@ class _AlertTileState extends State<_AlertTile> {
     final url = widget.alert.sourceUrl;
     if (url == null || url.isEmpty) return;
     final uri = Uri.tryParse(url);
-    if (uri != null) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (uri == null) return;
+    bool ok = false;
+    try {
+      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+    if (!ok) {
+      try {
+        ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      } catch (_) {}
+    }
+    if (!ok) {
+      try {
+        ok = await launchUrl(uri, mode: LaunchMode.platformDefault);
+      } catch (_) {}
+    }
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không mở được trình duyệt. Link: $url')),
+      );
     }
   }
 
