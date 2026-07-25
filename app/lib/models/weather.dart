@@ -11,6 +11,7 @@ class WeatherResponse {
   final List<HourlyItem> hourly;
   final List<DailyItem> daily;
   final Hydro? hydro;
+  final AirQuality? airQuality;
 
   WeatherResponse({
     this.place,
@@ -23,6 +24,7 @@ class WeatherResponse {
     required this.hourly,
     required this.daily,
     this.hydro,
+    this.airQuality,
   });
 
   factory WeatherResponse.fromJson(Map<String, dynamic> j) {
@@ -44,6 +46,7 @@ class WeatherResponse {
           .map((e) => DailyItem.fromJson(e))
           .toList(),
       hydro: j['hydro'] != null ? Hydro.fromJson(j['hydro']) : null,
+      airQuality: j['airQuality'] != null ? AirQuality.fromJson(j['airQuality']) : null,
     );
   }
 }
@@ -60,6 +63,7 @@ class WeatherAlert {
   final String severity;  // danger | warning | watch
   final String title;
   final String message;
+  final String fullText;  // toàn văn bản tin (nút mở rộng)
   final String source;
   final String? sourceUrl;
   final DateTime? issuedAt;
@@ -71,6 +75,7 @@ class WeatherAlert {
     required this.severity,
     required this.title,
     required this.message,
+    this.fullText = '',
     required this.source,
     this.sourceUrl,
     this.issuedAt,
@@ -83,6 +88,7 @@ class WeatherAlert {
         severity: j['severity'] ?? 'watch',
         title: j['title'] ?? '',
         message: j['message'] ?? '',
+        fullText: j['fullText'] ?? '',
         source: j['source'] ?? '',
         sourceUrl: j['sourceUrl'],
         issuedAt: j['issuedAt'] != null ? DateTime.tryParse(j['issuedAt']) : null,
@@ -127,6 +133,7 @@ class CurrentWeather {
   final int weatherCode;
   final String condition;
   final String icon;
+  final num? uvIndex;   // UV HIỆN TẠI (theo giờ)
   final Wind wind;
 
   CurrentWeather({
@@ -139,6 +146,7 @@ class CurrentWeather {
     required this.weatherCode,
     required this.condition,
     required this.icon,
+    this.uvIndex,
     required this.wind,
   });
 
@@ -152,6 +160,7 @@ class CurrentWeather {
         weatherCode: j['weatherCode'] ?? 0,
         condition: j['condition'] ?? '',
         icon: j['icon'] ?? 'cloudy',
+        uvIndex: j['uvIndex'],
         wind: Wind.fromJson(j['wind'] ?? {}),
       );
 }
@@ -247,6 +256,26 @@ class Hydro {
   factory Hydro.fromJson(Map<String, dynamic> j) => Hydro(
         salinity: j['salinity'] != null ? SalinityStation.fromJson(j['salinity']) : null,
         flood: (j['flood'] as List? ?? []).map((e) => FloodProvince.fromJson(e)).toList(),
+        source: j['source'],
+      );
+}
+
+class AirQuality {
+  final int? aqi;
+  final String? level;
+  final String? color;
+  final String? advice;
+  final num? pm25;
+  final num? pm10;
+  final String? source;
+  AirQuality({this.aqi, this.level, this.color, this.advice, this.pm25, this.pm10, this.source});
+  factory AirQuality.fromJson(Map<String, dynamic> j) => AirQuality(
+        aqi: j['aqi'],
+        level: j['level'],
+        color: j['color'],
+        advice: j['advice'],
+        pm25: j['pm25'],
+        pm10: j['pm10'],
         source: j['source'],
       );
 }

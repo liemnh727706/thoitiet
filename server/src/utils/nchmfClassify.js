@@ -51,6 +51,23 @@ function salinitySeverity(title, body) {
   return 'watch';
 }
 
+// Gió mạnh/sóng lớn biển + dông/tố/lốc/vòi rồng
+function severeKind(title) {
+  const t = up(title);
+  if (t.includes('TRÊN BIỂN') || t.includes('GIÓ MẠNH') || t.includes('SÓNG LỚN')) return 'wind';
+  return 'storm'; // dông, tố, lốc, vòi rồng, sét, mưa đá
+}
+function severeSeverity(title) {
+  return up(title).includes('KHẨN CẤP') ? 'danger' : 'warning';
+}
+
+// Mưa lớn diện rộng / mưa dông cục bộ
+function heavyRainSeverity(title) {
+  const t = up(title);
+  if (t.includes('ĐẶC BIỆT') || t.includes('RẤT LỚN') || t.includes('KHẨN CẤP')) return 'danger';
+  return 'warning';
+}
+
 export function classify(category, title, body = '') {
   switch (category) {
     case 'storm':
@@ -64,6 +81,10 @@ export function classify(category, title, body = '') {
       return { kind: 'flood', severity: floodSeverity(title) };
     case 'salinity':
       return { kind: 'salinity', severity: salinitySeverity(title, body) };
+    case 'severe':
+      return { kind: severeKind(title), severity: severeSeverity(title) };
+    case 'heavyrain':
+      return { kind: 'rain', severity: heavyRainSeverity(title) };
     default:
       return { kind: 'other', severity: 'watch' };
   }

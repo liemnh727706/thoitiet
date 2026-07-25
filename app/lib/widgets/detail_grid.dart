@@ -7,16 +7,23 @@ import '../utils/formatters.dart';
 class DetailGrid extends StatelessWidget {
   final CurrentWeather current;
   final DailyItem? today;
-  const DetailGrid({super.key, required this.current, this.today});
+  final AirQuality? air;
+  const DetailGrid({super.key, required this.current, this.today, this.air});
 
   @override
   Widget build(BuildContext context) {
+    final uv = current.uvIndex; // UV HIỆN TẠI (không phải max cả ngày)
     final items = <_Metric>[
       _Metric(Icons.water_drop_outlined, 'Độ ẩm', '${current.humidity ?? '--'}%'),
       _Metric(Icons.air_rounded, 'Gió',
           '${current.wind.speed ?? '--'} km/h ${current.wind.direction}'),
+      // Không khí (US AQI) — thay chỗ hoặc bổ sung
+      if (air != null && air!.aqi != null)
+        _Metric(Icons.masks_outlined, 'Không khí', 'AQI ${air!.aqi} · ${air!.level}',
+            valueColor: _aqiColor(air!.color)),
+      _Metric(Icons.wb_sunny_outlined, 'Tia UV',
+          uv != null ? '${uv % 1 == 0 ? uv.toInt() : uv} · ${uvLabel(uv)}' : uvLabel(uv)),
       _Metric(Icons.compress_rounded, 'Áp suất', '${current.pressure ?? '--'} hPa'),
-      _Metric(Icons.wb_sunny_outlined, 'Tia UV', uvLabel(today?.uvIndexMax)),
       _Metric(Icons.speed_rounded, 'Gió giật', '${current.wind.gust ?? '--'} km/h'),
       _Metric(Icons.umbrella_outlined, 'Khả năng mưa',
           '${today?.precipitationProbability ?? '--'}%'),
@@ -38,7 +45,21 @@ class _Metric {
   final IconData icon;
   final String label;
   final String value;
-  _Metric(this.icon, this.label, this.value);
+  final Color? valueColor;
+  _Metric(this.icon, this.label, this.value, {this.valueColor});
+}
+
+// Màu theo mức AQI
+Color _aqiColor(String? c) {
+  switch (c) {
+    case 'good': return const Color(0xFF9DE29D);
+    case 'moderate': return const Color(0xFFFFE082);
+    case 'sensitive': return const Color(0xFFFFB74D);
+    case 'unhealthy': return const Color(0xFFFF8A80);
+    case 'very_unhealthy': return const Color(0xFFCE93D8);
+    case 'hazardous': return const Color(0xFFEF9A9A);
+    default: return Colors.white;
+  }
 }
 
 class _MetricTile extends StatelessWidget {
@@ -65,7 +86,7 @@ class _MetricTile extends StatelessWidget {
                 Text(metric.value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: metric.valueColor ?? Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
               ],
             ),
           ),

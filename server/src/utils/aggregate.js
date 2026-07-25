@@ -96,6 +96,7 @@ export function aggregate(raw, place) {
     weatherCode: c.weather_code,
     condition: wx.text,
     icon: wx.icon,
+    uvIndex: c.uv_index == null ? null : Math.round(c.uv_index * 10) / 10,
     wind: {
       speed: round(c.wind_speed_10m),
       gust: round(c.wind_gusts_10m),

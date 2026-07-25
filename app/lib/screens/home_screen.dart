@@ -114,7 +114,7 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 8),
           CurrentWeatherCard(current: data.current),
           const SizedBox(height: 24),
-          DetailGrid(current: data.current, today: today),
+          DetailGrid(current: data.current, today: today, air: data.airQuality),
           // Ngập lụt & xâm nhập mặn (ĐBSCL / vùng có dữ liệu Thủy lợi)
           if (data.hydro != null) ...[
             const SizedBox(height: 16),

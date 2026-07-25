@@ -16,12 +16,17 @@ const CATEGORY_PAGES = {
   flood: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/lu-ngap-lut-16-18.html',
   flashflood: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/lu-quet-17-18.html',
   salinity: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/xam-nhap-man-20-18.html',
+  // Gió mạnh/sóng lớn/mưa dông TRÊN BIỂN + dông, tố, lốc, vòi rồng
+  severe: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/dong-to-loc-voi-rong-2052-15.html',
+  // Mưa lớn diện rộng / mưa dông cục bộ
+  heavyrain: 'https://www.nchmf.gov.vn/kttv/vi-VN/1/mua-lon-mua-lon-dien-rong-2053-15.html',
 };
 
 // Số bản tin (đã khử trùng theo tiêu đề) lấy tối đa mỗi loại:
 // lũ có thể nhiều vùng cùng lúc; loại quốc gia/đơn lẻ chỉ lấy bản mới nhất.
 const MAX_PER_CATEGORY = {
   storm: 2, heat: 1, cold: 1, flood: 3, flashflood: 1, salinity: 2,
+  severe: 2, heavyrain: 2,
 };
 
 async function getHtml(url) {
@@ -88,12 +93,17 @@ async function parseCategory(category, url) {
     const ageHours = (Date.now() - new Date(it.issuedAtIso).getTime()) / 3_600_000;
     const regions = regionsInText(`${it.title} ${detail.fullText}`);
     const storm = category === 'storm' ? parseStorm(detail.fullText) : null;
+    // toàn văn bản tin (cắt ~2600 ký tự) cho nút "mở rộng" ở app
+    const fullText = detail.fullText && detail.fullText.length > 2600
+      ? detail.fullText.slice(0, 2600) + '…'
+      : detail.fullText;
     out.push({
       category,
       kind,
       severity,
       title: it.title,
       summary: detail.summary,
+      fullText,
       regions,
       storm,
       sourceUrl: it.href,
@@ -108,7 +118,10 @@ async function parseCategory(category, url) {
 // Ngưỡng "còn hiệu lực" (giờ) theo loại tin. Có thể override tất cả bằng env
 // NCHMF_FRESH_HOURS (hữu ích để tinh chỉnh hoặc demo).
 const OVERRIDE = process.env.NCHMF_FRESH_HOURS ? Number(process.env.NCHMF_FRESH_HOURS) : null;
-const DEFAULT_FRESH = { storm: 48, heat: 30, cold: 36, flood: 36, flashflood: 36, salinity: 192 };
+const DEFAULT_FRESH = {
+  storm: 48, heat: 30, cold: 36, flood: 36, flashflood: 36, salinity: 192,
+  severe: 24, heavyrain: 24,
+};
 const FRESH_HOURS = OVERRIDE
   ? Object.fromEntries(Object.keys(DEFAULT_FRESH).map((k) => [k, OVERRIDE]))
   : DEFAULT_FRESH;

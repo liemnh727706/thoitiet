@@ -12,6 +12,7 @@ const CURRENT = [
   'wind_direction_10m',
   'wind_gusts_10m',
   'surface_pressure',
+  'uv_index', // UV HIỆN TẠI (thay vì chỉ max cả ngày -> chính xác theo giờ)
 ];
 
 const HOURLY = [
