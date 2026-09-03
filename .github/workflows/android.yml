@@ -50,7 +50,9 @@ jobs:
         run: flutter test
 
       - name: Build APK (release)
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release \
+            ${{ secrets.CARTO_KEY && format('--dart-define=CARTO_KEY={0}', secrets.CARTO_KEY) || '' }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

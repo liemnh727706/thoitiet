@@ -8,6 +8,14 @@ import '../services/api_service.dart';
 import '../data/vn_places.dart';
 import '../utils/formatters.dart';
 
+// Nền bản đồ CARTO (Positron không nhãn). Từ 2026 CARTO bắt buộc API key:
+// thiếu key vẫn trả tile nhưng bị đóng dấu chìm "API KEY REQUIRED".
+// Key nạp lúc build, KHÔNG commit vào repo:
+//   flutter build apk --release --dart-define=CARTO_KEY=<key>
+const _cartoKey = String.fromEnvironment('CARTO_KEY');
+final _cartoBaseUrl =
+    'https://basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}.png'
+    '${_cartoKey.isEmpty ? '' : '?key=$_cartoKey'}';
 
 // Bản đồ radar mưa (RainViewer) + đường đi bão (JMA/NCHMF).
 // - Base map KHÔNG nhãn (CartoDB) -> bỏ hết tên nước ngoài.
@@ -132,8 +140,7 @@ class _RadarScreenState extends State<RadarScreen> {
           children: [
             // Nền KHÔNG nhãn (bỏ tên nước ngoài)
             TileLayer(
-              urlTemplate:
-                  'https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',
+              urlTemplate: _cartoBaseUrl,
               userAgentPackageName: 'com.example.vn_weather',
               maxNativeZoom: 20,
             ),
