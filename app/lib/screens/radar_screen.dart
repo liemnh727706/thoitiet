@@ -7,6 +7,10 @@ import '../models/weather.dart';
 import '../services/api_service.dart';
 import '../data/vn_places.dart';
 import '../utils/formatters.dart';
+const _cartoKey = String.fromEnvironment('cb1_2tzr_1_df8712d0e3ec25cb69635b2e');
+final _cartoBaseUrl =
+    'https://basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}.png'
+    '${_cartoKey.isEmpty ? '' : '?key=$_cartoKey'}';
 
 // Bản đồ radar mưa (RainViewer) + đường đi bão (JMA/NCHMF).
 // - Base map KHÔNG nhãn (CartoDB) -> bỏ hết tên nước ngoài.
