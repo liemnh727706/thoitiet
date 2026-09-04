@@ -40,6 +40,27 @@ jobs:
             echo "ℹ️ Chưa có secret GOOGLE_SERVICES_JSON — build không FCM (bình thường)"
           fi
 
+      - name: Cấu hình keystore release (từ secrets nếu có)
+        env:
+          KS: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KS_KEYPASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS" ]; then
+            # certutil -encode có thể kèm dòng BEGIN/END -> loại bỏ trước khi giải mã
+            echo "$KS" | grep -v -- "-----" | base64 -di > android/app/release.jks
+            {
+              echo "storeFile=release.jks"
+              echo "storePassword=$KS_PASS"
+              echo "keyAlias=$KS_ALIAS"
+              echo "keyPassword=$KS_KEYPASS"
+            } > android/key.properties
+            echo "✅ Ký release bằng keystore cố định — cài đè giữ được dữ liệu"
+          else
+            echo "ℹ️ Chưa có secret KEYSTORE_BASE64 — ký debug (chữ ký đổi mỗi build, phải gỡ app để cài)"
+          fi
+
       - name: Cài dependencies
         run: flutter pub get
 
