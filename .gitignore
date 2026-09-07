@@ -21,3 +21,6 @@ app/lib/firebase_options.dart
 # OS
 Thumbs.db
 .DS_Store
+
+# Cấu hình riêng từng máy chủ (network dùng chung, mount secrets...)
+docker-compose.override.yml
