@@ -104,24 +104,28 @@ class _AlertTileState extends State<_AlertTile> {
               ],
             ),
           ),
-          // Link nguồn khi mở rộng
+          // Link nguồn khi mở rộng — nút chiếm hết chiều ngang cho dễ bấm
           if (_expanded && (alert.sourceUrl?.isNotEmpty ?? false)) ...[
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: _openSource,
-              child: Row(
-                children: [
-                  Icon(Icons.open_in_new_rounded, color: fg, size: 15),
-                  const SizedBox(width: 5),
-                  Expanded(
-                    child: Text('Xem bản tin gốc: ${alert.sourceUrl}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: fg, fontSize: 11.5, decoration: TextDecoration.underline)),
-                  ),
-                ],
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _openSource,
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: const Text('Xem bản tin gốc'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.24),
+                  foregroundColor: fg,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
+            const SizedBox(height: 4),
+            Text(alert.sourceUrl!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: fg.withValues(alpha: 0.75), fontSize: 10.5)),
           ],
           if (!_expanded && canExpand)
             Padding(
