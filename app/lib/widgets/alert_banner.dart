@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/weather.dart';
 import '../theme/weather_gradients.dart';
+import '../utils/open_link.dart';
 import '../utils/weather_icons.dart';
 
 // TẦNG 1: Cảnh báo khẩn - luôn hiển thị trên cùng nếu có. Bấm để mở rộng
@@ -30,31 +30,8 @@ class _AlertTile extends StatefulWidget {
 class _AlertTileState extends State<_AlertTile> {
   bool _expanded = false;
 
-  Future<void> _openSource() async {
-    final url = widget.alert.sourceUrl;
-    if (url == null || url.isEmpty) return;
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    bool ok = false;
-    try {
-      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
-    if (!ok) {
-      try {
-        ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-      } catch (_) {}
-    }
-    if (!ok) {
-      try {
-        ok = await launchUrl(uri, mode: LaunchMode.platformDefault);
-      } catch (_) {}
-    }
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không mở được trình duyệt. Link: $url')),
-      );
-    }
-  }
+  Future<void> _openSource() =>
+      openSourceLink(context, widget.alert.sourceUrl);
 
   @override
   Widget build(BuildContext context) {

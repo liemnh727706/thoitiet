@@ -7,6 +7,7 @@ import '../models/weather.dart';
 import '../services/api_service.dart';
 import '../data/vn_places.dart';
 import '../utils/formatters.dart';
+import '../utils/open_link.dart';
 
 // Nền bản đồ CARTO (Positron không nhãn). Từ 2026 CARTO bắt buộc API key:
 // thiếu key vẫn trả tile nhưng bị đóng dấu chìm "API KEY REQUIRED".
@@ -254,40 +255,59 @@ class _RadarScreenState extends State<RadarScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: _storms.take(3).map((s) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.red.shade700,
+          final hasLink = s.sourceUrl?.isNotEmpty ?? false;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: InkWell(
+              // Chạm vào thẻ bão để mở bản tin gốc (NCHMF/JMA) ra trình duyệt.
+              onTap: hasLink ? () => openSourceLink(context, s.sourceUrl) : null,
               borderRadius: BorderRadius.circular(10),
-            ),
-            constraints: const BoxConstraints(maxWidth: 230),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade700,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                constraints: const BoxConstraints(maxWidth: 230),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.cyclone_rounded, color: Colors.white, size: 17),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(s.label,
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        const Icon(Icons.cyclone_rounded,
+                            color: Colors.white, size: 17),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(s.label,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                        if (hasLink) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.open_in_new_rounded,
+                              color: Colors.white, size: 13),
+                        ],
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                        [
+                          'Nguồn ${s.source}',
+                          if (s.intensity != null) 'gió ${s.intensity}',
+                          if (s.movement != null) 'hướng ${s.movement}',
+                        ].join(' · '),
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 10.5),
+                      ),
                     ),
                   ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 3),
-                  child: Text(
-                    [
-                      'Nguồn ${s.source}',
-                      if (s.intensity != null) 'gió ${s.intensity}',
-                      if (s.movement != null) 'hướng ${s.movement}',
-                    ].join(' · '),
-                    style: const TextStyle(color: Colors.white, fontSize: 10.5),
-                  ),
-                ),
-              ],
+              ),
             ),
           );
         }).toList(),
