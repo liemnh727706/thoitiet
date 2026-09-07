@@ -83,7 +83,8 @@ async function fetchStorm(id) {
     track,
     past,
     issued: title.issue?.UTC || null,
-    sourceUrl: `https://www.jma.go.jp/bosai/en/typhoon/`,
+    // JMA đã bỏ /bosai/en/typhoon/ (404). Trang bản đồ bão bản tiếng Anh:
+    sourceUrl: 'https://www.jma.go.jp/bosai/map.html#contents=typhoon&lang=en',
   };
 }
 
