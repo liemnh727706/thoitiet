@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/weather.dart';
+import '../screens/bulletin_web_screen.dart';
 import '../theme/weather_gradients.dart';
-import '../utils/open_link.dart';
 import '../utils/weather_icons.dart';
 
 // TẦNG 1: Cảnh báo khẩn - luôn hiển thị trên cùng nếu có. Bấm để mở rộng
@@ -30,8 +30,18 @@ class _AlertTile extends StatefulWidget {
 class _AlertTileState extends State<_AlertTile> {
   bool _expanded = false;
 
-  Future<void> _openSource() =>
-      openSourceLink(context, widget.alert.sourceUrl);
+  Future<void> _openSource() async {
+    final url = widget.alert.sourceUrl?.trim() ?? '';
+    if (url.isEmpty) return;
+    // Mở trong app: nhiều máy không mở được trình duyệt ngoài từ app.
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            BulletinWebScreen(url: url, title: widget.alert.title),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

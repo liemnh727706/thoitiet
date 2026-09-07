@@ -7,7 +7,7 @@ import '../models/weather.dart';
 import '../services/api_service.dart';
 import '../data/vn_places.dart';
 import '../utils/formatters.dart';
-import '../utils/open_link.dart';
+import 'bulletin_web_screen.dart';
 
 // Nền bản đồ CARTO (Positron không nhãn). Từ 2026 CARTO bắt buộc API key:
 // thiếu key vẫn trả tile nhưng bị đóng dấu chìm "API KEY REQUIRED".
@@ -260,7 +260,15 @@ class _RadarScreenState extends State<RadarScreen> {
             padding: const EdgeInsets.only(bottom: 6),
             child: InkWell(
               // Chạm vào thẻ bão để mở bản tin gốc (NCHMF/JMA) ra trình duyệt.
-              onTap: hasLink ? () => openSourceLink(context, s.sourceUrl) : null,
+              onTap: hasLink
+                  ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BulletinWebScreen(
+                              url: s.sourceUrl!, title: s.label),
+                        ),
+                      )
+                  : null,
               borderRadius: BorderRadius.circular(10),
               child: Container(
                 padding:
